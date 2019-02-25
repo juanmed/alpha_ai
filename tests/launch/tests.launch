@@ -1,0 +1,5 @@
+<launch>
+		<node pkg="tests" name="uav_pose_publisher" type="uav_tf_listener.py" output="screen"/>
+		<node pkg="tests" name="rateThrust_publisher" type="rateThrust_publisher.py" output="screen"/>
+
+</launch>

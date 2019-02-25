@@ -1,0 +1,4 @@
+<launch>
+		<node pkg="tests" name="uav_posestamped_publisher" type="uav_poseStamped_publisher.py"/>
+		<node pkg="tests" name="uav_state_publisher" type="uav_state_publisher.py" output="screen"/>
+</launch>
