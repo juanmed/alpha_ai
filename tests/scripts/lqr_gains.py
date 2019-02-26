@@ -152,7 +152,8 @@ Cr = np.matrix([1.0])
 # transmission matrix for all systems
 D_ = np.matrix([0.0])
 
-
+# Helper code for visualizing the performance of the gains computed 
+# by both the LQR and pole placement control methods
 if __name__ == '__main__':
 
 	import matplotlib.pyplot as plt
@@ -211,7 +212,7 @@ if __name__ == '__main__':
 	x_cl_pp = ctl.ss(At-Bt*Kt_pp, Bt*(N_ut_pp + Kt_pp*N_xt_pp)*1.0 , Ct, D_)
 	w_cl_pp = ctl.ss(Ar-Br*Kr_pp, Br*(N_ur_pp + Kr_pp*N_xr_pp)*1.0 , Cr, D_) 
 
-	# define an input shape and draw response
+	# define an input signal shape and draw response
 	tx, x_lqr, s = ctl.forced_response(x_cl_lqr, T=t, U=refx)
 	tx, w_lqr, s = ctl.forced_response(w_cl_lqr, T=t, U=refw)
 

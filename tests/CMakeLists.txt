@@ -53,6 +53,7 @@ find_package(catkin REQUIRED COMPONENTS
  add_message_files(
    FILES
    UAV_state.msg
+   UAV_traj.msg
  )
 
 ## Generate services in the 'srv' folder
