@@ -56,7 +56,6 @@ def publish_auv_poseStamped():
             ps_msg.pose.orientation.w = uav_r[3]
 
             pose_publisher.publish(ps_msg)
-
             rospy.loginfo(ps_msg)
 
         except (tf.LookupException, tf.ConnectivityException): #tf.ExtrapolationException

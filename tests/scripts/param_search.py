@@ -18,6 +18,7 @@ def search_params():
     Izz = rospy.get_param(("/uav/flightgoggles_uav_dynamics/vehicle_inertia_zz"))
 
     gate_names = rospy.get_param("/uav/gate_names")
+    init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
 
     gate_locations = {}
     for name in gate_names:
@@ -47,6 +48,10 @@ def search_params():
     print("Izz: {}, {}".format(Izz,type(Izz)))
     for key in gate_locations:
         print("{}, {}, {}".format(key,gate_locations[key],type(gate_locations[key])))
+    print("Init pose: {}, type {}".format(init_pose,type(init_pose)))
+
+
+
 
 
 if __name__ == '__main__':
