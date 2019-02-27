@@ -72,15 +72,13 @@ def pub_traj():
 
 			traj_publisher.publish(traj)
 			rospy.loginfo(traj)
-			
+
 			rate.sleep()
 
 
 		except:
 			rospy.loginfo('People...we have a problem')
 			continue
-
-
 
 
 if __name__ == '__main__':
