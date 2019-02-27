@@ -53,7 +53,7 @@ while not rospy.is_shutdown():
     u_a = np.matrix(u_a)
 
     u_b = ref_trajectory[5]
-    u_a = np.matrix(u_a)
+    u_b = np.matrix(u_b)
 
     u_c = ref_trajectory[6]
     u_c = np.matrix(u_c)
