@@ -3,6 +3,7 @@ import gate_location
 import get_gate_param
 
 
+# without returning : final keyframe != initial keyframe
 class KeyframeGeneration:
 
     def __init__(self):

@@ -257,10 +257,10 @@ def compute_ref(trajectory):
     # This means: first rotate psi degrees around Z axis,
     # then theta degrees around Y axis, and lastly phi degrees around X axis
 
-    # or_ = RotToRPY_ZYX(R_)  # assuming ZYX Eugler angle convention, so sent matrix should be
+    or_ = RotToRPY_ZYX(R_)  # assuming ZYX Eugler angle convention, so sent matrix should be
     # body - world frame
 
-    or_ = RotToRPY_ZXY(R_.T)  # assuming ZXY Eugler angle convention, so sent matrix should be
+    #or_ = RotToRPY_ZXY(R_.T)  # assuming ZXY Eugler angle convention, so sent matrix should be
     # world - body frame
 
     # compute u_a input for system reference
@@ -283,7 +283,9 @@ def compute_ref(trajectory):
 
     # we send the received pos_traj, and vel_traj vectors as the reference pos and vel vectors
     # because that is the result from the differential flatness output selection
-    return [pos_traj.T, vel_traj.T, or_, w_, acc_traj.T, w_dot_, u_c, u_1, u_x]
+
+    #return [pos_traj.T, vel_traj.T, or_, w_, acc_traj.T, w_dot_, u_c, u_1, u_x]
+    return [pos_traj.T, vel_traj.T, w_, or_, u_a, u_b, u_c]
 
 
 """
