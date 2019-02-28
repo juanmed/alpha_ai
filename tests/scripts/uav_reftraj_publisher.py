@@ -63,7 +63,7 @@ def pub_traj():
     rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
 
     # publish at 10Hz
-    rate = rospy.Rate(10.0)
+    rate = rospy.Rate(100.0)
 
     # create a trajectory generator
     traj_gen = Trajectory_Generator()
@@ -71,7 +71,7 @@ def pub_traj():
     while not rospy.is_shutdown():
         
         try:
-            
+
             # Compute trajectory at time = now
             time = rospy.get_time()
             ref_traj = traj_gen.compute_reference_traj(time)

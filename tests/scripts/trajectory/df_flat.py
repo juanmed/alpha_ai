@@ -308,11 +308,11 @@ b = 0.01  # air drag/friction force
 # c = 0.2 #air friction constant
 
 # quadrotor physical constants
-m = 0.18  # kg  mass of the quadrotor
+m = 1  # kg  mass of the quadrotor
 Ktao = 0.02  # Drag torque constant for motors
 Kt = 0.2  # Thrust constant for motors
-I = np.matrix([[0.00025, 0, 2.55e-6],
-               [0, 0.000232, 0],
-               [2.55e-6, 0, 0.0003738]]);
+I = np.matrix([[0.0049, 0, 0],
+               [0, 0.0049, 0],
+               [0, 0, 0.0049]]);
 
 invI = np.linalg.inv(I)

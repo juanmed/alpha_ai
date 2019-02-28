@@ -24,6 +24,6 @@ def qp_solution(order, n, gate, t):
     sol_x = sol['x']            # fval = sol['primal objective']
     # np.savetxt("x.csv", sol_x, delimiter=",")
 
-    draw_trajectory.draw_trajectory(sol_x, order, gate, n, t)
+    #draw_trajectory.draw_trajectory(sol_x, order, gate, n, t)
     return sol_x
 

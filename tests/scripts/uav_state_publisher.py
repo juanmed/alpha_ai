@@ -108,7 +108,7 @@ class uavStatePublisher():
 
 		#self.count = self.count + 1
 		#self.time_delta_acc =  (self.time_delta_acc + time_delta)
-
+		#rospy.loginfo(pose_msg.header.stamp - imu_msg.header.stamp)
 		rospy.loginfo(uav_state)
 		#rospy.loginfo("Time Delta Average is: {}".format(self.time_delta_acc/self.count))
 

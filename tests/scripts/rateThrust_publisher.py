@@ -35,7 +35,7 @@ class rateThrust_Publisher():
 
         rt_msg.thrust.x = 0.0
         rt_msg.thrust.y = 0.0
-        rt_msg.thrust.z = 10.8
+        rt_msg.thrust.z = 9.9
         self.rt_publisher.publish(rt_msg)
 
         #rospy.loginfo("Published rateThrust message :) !")

@@ -8,8 +8,6 @@ from geometry_msgs.msg import PoseStamped
 
 def publish_auv_poseStamped():
 
-
-
     # create topic
     pose_publisher = rospy.Publisher('uav_PoseStamped', PoseStamped, queue_size = 10)
 
@@ -41,7 +39,7 @@ def publish_auv_poseStamped():
             ps_msg = PoseStamped()
 
             # Fill Header first
-            ps_msg.header.stamp = latest_time
+            ps_msg.header.stamp = rospy.Time.now() #latest_time , for sync
             ps_msg.header.frame_id = 'uav/imu'
 
             # Fill Translation
