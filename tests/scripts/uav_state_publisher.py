@@ -38,12 +38,19 @@ class uavStatePublisher():
 
 		# define variables to compute linear velocity from imu
 		init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
-		self.init_pos = np.zeros(3)
-
+		
 		# init position
+		self.init_pos = np.zeros(3)
 		self.init_pos[0] = init_pose[0]
 		self.init_pos[1] = init_pose[1]
 		self.init_pos[2] = init_pose[2]
+
+		# init orientation
+		self.init_ori = np.zeros(4)
+		self.init_ori[0] = init_pose[3]
+		self.init_ori[1] = init_pose[4]
+		self.init_ori[2] = init_pose[5]
+		self.init_ori[3] = init_pose[6]
 
 		# init timestamp
 		self.t1 = rospy.Time.now()
@@ -98,19 +105,38 @@ class uavStatePublisher():
 		uav_state.twist.linear.y = v[1]
 		uav_state.twist.linear.z = v[2]
 
-		# angular velocity directly from IMU
-		uav_state.twist.angular.x = imu_msg.angular_velocity.x
-		uav_state.twist.angular.y = imu_msg.angular_velocity.y
-		uav_state.twist.angular.z = imu_msg.angular_velocity.z
+		# angular velocity by derivative of quaternion
+		# look: https://math.stackexchange.com/questions/2282938/converting-from-quaternion-to-angular-velocity-then-back-to-quaternion
+		# w_b = Im(2 * [q(t)'*q(t+h)]/delta_t )  q(t)': is the congujate
+ 		ori = np.zeros(4)
+		ori[0] = pose_msg.pose.orientation.x
+		ori[1] = pose_msg.pose.orientation.y
+		ori[2] = pose_msg.pose.orientation.z
+		ori[3] = pose_msg.pose.orientation.w
 
-		self.state_pub.publish(uav_state)
 		
+		prev_ori_cong = np.zeros(4)	
+		prev_ori_cong[0] = -1.0*self.init_ori[0]
+		prev_ori_cong[1] = -1.0*self.init_ori[1]
+		prev_ori_cong[2] = -1.0*self.init_ori[2]
+		prev_ori_cong[3] = self.init_ori[3]
 
-		#self.count = self.count + 1
-		#self.time_delta_acc =  (self.time_delta_acc + time_delta)
-		#rospy.loginfo(pose_msg.header.stamp - imu_msg.header.stamp)
+		# Im(q1*q2) = [w1*v2 + w2*v1 + v1xv2]
+		w_b = prev_ori_cong[3]*ori[0:3] + ori[3]*prev_ori_cong[0:3] + np.cross(prev_ori_cong[0:3],ori[0:3])
+		w_b = 2.0*w_b/time_delta
+
+
+		# prepare for next step
+		self.init_ori[0] = ori[0]
+		self.init_ori[1] = ori[1]
+		self.init_ori[2] = ori[2]
+		self.init_ori[3] = ori[3]
+
+		uav_state.twist.angular.x = w_b[0]
+		uav_state.twist.angular.y = w_b[1]
+		uav_state.twist.angular.z = w_b[2]
+
 		rospy.loginfo(uav_state)
-		#rospy.loginfo("Time Delta Average is: {}".format(self.time_delta_acc/self.count))
 
 if __name__ == '__main__':
 	try:
