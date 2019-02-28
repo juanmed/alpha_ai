@@ -187,6 +187,7 @@ if __name__ == '__main__':
 
 	Kt_lqr, N_ut_lqr, N_xt_lqr = calculate_LQR_gains(At,Bt,Ct,D_,Qt,Rt)
 	Kr_lqr, N_ur_lqr, N_xr_lqr = calculate_LQR_gains(Ar,Br,Cr,D_,Qr,Rr)
+	#print(type(Kr_lqr))
 
 	Kt_pp, N_ut_pp, N_xt_pp = calculate_pp_gains(At,Bt,Ct,D_,dpt)
 	Kr_pp, N_ur_pp, N_xr_pp = calculate_pp_gains(Ar,Br,Cr,D_,dpr)

@@ -95,7 +95,13 @@ def pub_traj():
             traj.pose.position.y = y
             traj.pose.position.z = z
 
-            quat = tf.transformations.quaternion_from_euler(phi,theta,psi, axes = 'rxyz')
+            # Following http://docs.ros.org/jade/api/tf/html/python/transformations.html
+            # the axes parameter is such that 
+            # r = apply rotation on the "new" frame
+            # zyx = this means first a rotation of 'psi' radians around the z axis is performed,
+            #       then of 'theta' radians about the new y axis ( because 'r' was specified)
+            #       then of 'phi' radians about the new x axis ( becuase 'r' was specified)
+            quat = tf.transformations.quaternion_from_euler(psi, theta, phi, axes = 'rzyx')
 
             traj.pose.orientation.x = quat[0]
             traj.pose.orientation.y = quat[1]
