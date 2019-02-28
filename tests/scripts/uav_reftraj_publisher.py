@@ -13,7 +13,8 @@ import trajectory.compute_trajectory as compute_trajectory
 import trajectory.df_flat as df_flat
 import trajectory.parameter as parameter
 import trajectory.qp_solution as qp_solution
-
+import trajectory.keyframe_generation as keyframe_generation
+import trajectory.draw_trajectory as draw_trajectory
 
 class Trajectory_Generator():
 
@@ -24,10 +25,15 @@ class Trajectory_Generator():
         self.n = parameter.n
         self.gate = parameter.gate
         self.t = parameter.t
-        
+
+        # generate keyframe
+        self.keyframe_cls = keyframe_generation.KeyframeGeneration()
+        self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
+
         # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t)
-        
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
+
         # initialize time
         self.init_time = rospy.get_time()
         self.last_time = rospy.get_time()
