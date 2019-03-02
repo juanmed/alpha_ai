@@ -70,7 +70,7 @@ class uavStatePublisher():
 		# create state message and populate
 		uav_state = UAV_state()
 
-		uav_state.header.stamp = pose_msg.header.stamp # should correspond to the same time
+		uav_state.header.stamp = rospy.Time.now()#pose_msg.header.stamp # should correspond to the same time
 		uav_state.header.frame_id = ""
 
 		# Fill linear and angular position
@@ -136,6 +136,7 @@ class uavStatePublisher():
 		uav_state.twist.angular.y = w_b[1]
 		uav_state.twist.angular.z = w_b[2]
 
+		self.state_pub.publish(uav_state)
 		rospy.loginfo(uav_state)
 
 if __name__ == '__main__':
