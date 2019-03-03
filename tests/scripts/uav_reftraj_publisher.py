@@ -67,7 +67,7 @@ class Trajectory_Generator2():
         # first compute waypoints: the first one is the initial position
         # and orientation, and the rest are the position of the gates
 
-        self.waypoints = self.get_waypoints()
+        self.waypoints = self.get_vertical_waypoints()
         print("Waypoints: ")
         print(self.waypoints)
         (self.coeff_x, self.coeff_y, self.coeff_z) = trajGen3D.get_MST_coefficients(self.waypoints)
@@ -94,7 +94,7 @@ class Trajectory_Generator2():
 
 
     def compute_reference_traj(self, time):
-        vel = 1.2
+        vel = 5
         trajectory_time = time - self.start_time
         #print("Time traj: {}".format(trajectory_time))
         flatout_trajectory = trajGen3D.generate_trajectory(trajectory_time, vel, self.waypoints, self.coeff_x, self.coeff_y, self.coeff_z)
@@ -103,7 +103,7 @@ class Trajectory_Generator2():
 
     # read initial position and gate positions
     # and return an np.array of these positions
-    def get_waypoints(self):
+    def get_gate_waypoints(self):
 
         # Then continue with the gates
         gate_names = rospy.get_param("/uav/gate_names")
@@ -131,6 +131,21 @@ class Trajectory_Generator2():
 
         return waypoints
 
+    def get_vertical_waypoints(self):
+
+        # First waypoint is initial position
+        init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
+        waypoints = np.zeros((2,3))
+        waypoints[0][0] = init_pose[0]
+        waypoints[0][1] = init_pose[1]
+        waypoints[0][2] = init_pose[2]   
+        
+        # now add a waypoint exactly 1m above the drone 
+        waypoints[1][0] = waypoints[0][0]
+        waypoints[1][1] = waypoints[0][1]
+        waypoints[1][2] = waypoints[0][2] + 1
+
+        return waypoints  
 
 
 
