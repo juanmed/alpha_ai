@@ -15,6 +15,7 @@ import trajectory.parameter as parameter
 import trajectory.qp_solution as qp_solution
 import trajectory.keyframe_generation as keyframe_generation
 import trajectory.draw_trajectory as draw_trajectory
+import trajectory.trajgen2_helper as trajGen3D
 
 class Trajectory_Generator():
 
@@ -60,6 +61,79 @@ class Trajectory_Generator():
 
         return ref_trajectory 
 
+class Trajectory_Generator2():
+    def __init__(self):
+
+        # first compute waypoints: the first one is the initial position
+        # and orientation, and the rest are the position of the gates
+
+        self.waypoints = self.get_waypoints()
+        print("Waypoints: ")
+        print(self.waypoints)
+        (self.coeff_x, self.coeff_y, self.coeff_z) = trajGen3D.get_MST_coefficients(self.waypoints)
+
+        print("coeff X:")
+        print(self.coeff_x)
+        print("coeff Y:")
+        print(self.coeff_y)
+        print("coeff Z:")
+        print(self.coeff_z)
+
+        # initialize time for trajectory generator
+        self.start_time = rospy.get_time()
+
+        # initialize heading
+        init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
+        init_quat = [init_pose[3],init_pose[4],init_pose[5],init_pose[6]]
+        yaw, pitch, roll = tf.transformations.euler_from_quaternion(init_quat, axes = "rzyx")
+        #print("Roll: {}, Pitch: {}, Yaw: {}".format(roll, pitch, yaw))
+        trajGen3D.yaw = yaw
+        trajGen3D.current_heading = np.array([np.cos(yaw),np.sin(yaw)])
+        #print("Yaw: {}, Heading: {}".format(trajGen3D.yaw,trajGen3D.current_heading))
+
+
+
+    def compute_reference_traj(self, time):
+        vel = 1.2
+        trajectory_time = time - self.start_time
+        #print("Time traj: {}".format(trajectory_time))
+        flatout_trajectory = trajGen3D.generate_trajectory(trajectory_time, vel, self.waypoints, self.coeff_x, self.coeff_y, self.coeff_z)
+        ref_trajectory = df_flat.compute_ref(flatout_trajectory)
+        return ref_trajectory
+
+    # read initial position and gate positions
+    # and return an np.array of these positions
+    def get_waypoints(self):
+
+        # Then continue with the gates
+        gate_names = rospy.get_param("/uav/gate_names")
+
+        # First waypoint is initial position
+        init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
+        waypoints = np.zeros((len(gate_names)+1,3))
+        waypoints[0][0] = init_pose[0]
+        waypoints[0][1] = init_pose[1]
+        waypoints[0][2] = init_pose[2]
+
+        for i,name in enumerate(gate_names):
+            gate_data = rospy.get_param("/uav/"+name)
+
+            gate_corners = np.array(gate_data['location'])
+            #print("Gate {}".format(i))
+            #print(gate_corners,type(gate_corners),gate_corners.shape)
+            #print("Center:")
+            gate_center = np.mean(gate_corners, axis = 0)
+            #print(gate_center)
+
+            waypoints[i+1][0] = gate_center[0] 
+            waypoints[i+1][1] = gate_center[1]
+            waypoints[i+1][2] = gate_center[2]
+
+        return waypoints
+
+
+
+
 def pub_traj():
 
     # create topic for publishing ref trajectory
@@ -68,20 +142,34 @@ def pub_traj():
     # init node
     rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
 
+    # IMPORTANT WAIT TIME! 
+    # If this is not here, the "start_time" in the trajectory generator is 
+    # initialized to zero (because the node has not started fully) and the
+    # time for the trajectory will be degenerated
+    rospy.sleep(0.1)
+ 
+    # create a trajectory generator
+    traj_gen = Trajectory_Generator2()
+
     # publish at 10Hz
     rate = rospy.Rate(100.0)
 
-    # create a trajectory generator
-    traj_gen = Trajectory_Generator()
 
     while not rospy.is_shutdown():
         
         try:
 
             # Compute trajectory at time = now
-            time = rospy.get_time()
+            time = rospy.get_time()   
             ref_traj = traj_gen.compute_reference_traj(time)
+            
 
+            # create and fill message
+            traj = UAV_traj()
+            traj.header.stamp = rospy.Time.now()
+            traj.header.frame_id = ""
+
+            
             # get all values... we need to do this becuase ref_traj contains old, ugly np.matrix
             # objects >:(
             x, y, z = np.array(ref_traj[0]).flatten()
@@ -91,11 +179,6 @@ def pub_traj():
             uax, uay, uaz = np.array(ref_traj[4]).flatten()
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
-
-            # create and fill message
-            traj = UAV_traj()
-            traj.header.stamp = rospy.Time.now()
-            traj.header.frame_id = ""
 
             traj.pose.position.x = x
             traj.pose.position.y = y
@@ -137,12 +220,11 @@ def pub_traj():
             # publish message
             traj_publisher.publish(traj)
             rospy.loginfo(traj)
-
             rate.sleep()
 
 
-        except:
-            #rospy.loginfo('People...we have a problem')
+        except Exception:
+            rospy.loginfo('People...we have a problem: {}'.format(Exception))
             continue
 
 
