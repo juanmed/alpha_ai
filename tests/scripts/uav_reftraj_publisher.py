@@ -32,7 +32,7 @@ class Trajectory_Generator():
 
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
+        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()

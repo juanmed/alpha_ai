@@ -146,6 +146,31 @@ class uav_Input_Publisher():
         self.input_publisher.publish(rt_msg)
         rospy.loginfo(rt_msg)
         
+
+    def callback2(self, state_msg, traj_msg):
+        # In general    u = -K*x + (N_u + K*N_x)*r
+        # r = reference state
+        # x = state
+        # K = LQR gains
+        # N_u, N_x = refrence input and reference state matrices       
+
+        # extract reference values
+        x_r, y_r, z_r = [traj_msg.pose.position.x, traj_msg.pose.position.y, traj_msg.pose.position.z]
+        vx_r, vy_r, vz_r = [traj_msg.twist.linear.x, traj_msg.twist.linear.y, traj_msg.twist.linear.z] 
+        ori_quat_r = [traj_msg.pose.orientation.x, traj_msg.pose.orientation.y, traj_msg.pose.orientation.z, traj_msg.pose.orientation.w]
+        phi_r, theta_r, psi_r = tf.transformations.euler_from_quaternion(ori_quat_r, axes = 'rzyx')
+        p_r, q_r, r_r = [traj_msg.twist.angular.x, traj_msg.twist.angular.y, traj_msg.twist.angular.z]
+
+        # extract drone real state values
+        x, y, z = [state_msg.pose.position.x, state_msg.pose.position.y, state_msg.pose.position.z]
+        vx, vy, vz = [state_msg.twist.linear.x, state_msg.twist.linear.y, state_msg.twist.linear.z]
+        ori_quat = [state_msg.pose.orientation.x, state_msg.pose.orientation.y, state_msg.pose.orientation.z, state_msg.pose.orientation.w]
+        phi, theta, psi = tf.transformations.euler_from_quaternion(ori_quat, axes = 'rzyx')
+        p, q, r = [state_msg.twist.angular.x, state_msg.twist.angular.y, state_msg.twist.angular.z]
+
+        
+
+
     def publish_thrust(self, thrust):
 
         # create single message
