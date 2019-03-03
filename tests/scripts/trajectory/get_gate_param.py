@@ -6,7 +6,6 @@ import numpy as np
 class GateLocation:
 
     def __init__(self):
-        self.init_pose = np.array([0.0, 0.0, 1.0, 0.0])
         self.gate_1 = rospy.get_param("/uav/Gate1/nominal_location")
         self.gate_2 = rospy.get_param("/uav/Gate2/nominal_location")
         self.gate_3 = rospy.get_param("/uav/Gate3/nominal_location")
@@ -30,6 +29,7 @@ class GateLocation:
         self.gate_21 = rospy.get_param("/uav/Gate21/nominal_location")
         self.gate_22 = rospy.get_param("/uav/Gate22/nominal_location")
         self.gate_23 = rospy.get_param("/uav/Gate23/nominal_location")
+
         self.gate_array = np.array([self.gate_1, self.gate_2, self.gate_3, self.gate_4, self.gate_5, self.gate_6,
                                     self.gate_7, self.gate_8, self.gate_9, self.gate_10, self.gate_11, self.gate_12,
                                     self.gate_13, self.gate_14, self.gate_15, self.gate_16, self.gate_17, self.gate_18,
@@ -39,10 +39,28 @@ class GateLocation:
         self.gate_racing = np.array([self.gate_10, self.gate_21, self.gate_2, self.gate_13, self.gate_9, self.gate_14,
                                      self.gate_1, self.gate_22, self.gate_15, self.gate_23, self.gate_6])
 
-    def get_gate_racing(self, gate_count):
+        self.gate_dic = dict(Gate1=self.gate_1, Gate2=self.gate_2, Gate3=self.gate_3, Gate4=self.gate_4,
+                             Gate5=self.gate_5, Gate6=self.gate_6, Gate7=self.gate_7, Gate8=self.gate_8,
+                             Gate9=self.gate_9, Gate10=self.gate_10, Gate11=self.gate_11, Gate12=self.gate_12,
+                             Gate13=self.gate_13, Gate14=self.gate_14, Gate15=self.gate_15, Gate16=self.gate_16,
+                             Gate17=self.gate_17, Gate18=self.gate_18, Gate19=self.gate_19, Gate20=self.gate_20,
+                             Gate21=self.gate_21, Gate22=self.gate_22, Gate23=self.gate_23)
+
+    def full_gate(self, gate_count):
         return self.gate_racing[0:gate_count+1, :, :]
+
+    def level_gate(self):
+        gate = rospy.get_param("/uav/gate_names")
+        gate_count = len(gate)
+        gate_racing = []
+        for i in range(0, gate_count):
+            gate_racing = np.append(gate_racing, self.gate_dic[gate[i]])
+        gate_racing = np.reshape(gate_racing, (gate_count, 4, 3))
+        return gate_racing
+
 
 if __name__ == "__main__":
 
     gate_location_cls = GateLocation()
-    print gate_location_cls.get_gate_racing(1)
+    #print gate_location_cls.get_gate_racing(1)
+    gate_location_cls.level_gate()

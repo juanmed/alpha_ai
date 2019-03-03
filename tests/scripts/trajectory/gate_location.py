@@ -4,7 +4,6 @@ import numpy as np
 class GateLocation:
 
     def __init__(self):
-        self.init_pose = np.array([0.0, 0.0, 1.1, 0.0])
         self.gate_1 = np.array(
             [[-0.009051204, -34.8755, 3.071861], [-0.008949876, -32.9505, 3.071861], [-0.008949876, -32.9505, 1.134362],
              [-0.009051204, -34.8755, 1.134362]])
@@ -73,19 +72,3 @@ class GateLocation:
         self.gate_23 = np.array(
             [[-9.328671, 7.773174, 2.942941], [-11.12867, 7.773277, 2.942941], [-9.328669, 7.773174, 1.096941],
              [-11.12867, 7.773277, 1.096941]])
-        self.gate_array = np.array([self.gate_1, self.gate_2, self.gate_3, self.gate_4, self.gate_5, self.gate_6,
-                                    self.gate_7, self.gate_8, self.gate_9, self.gate_10, self.gate_11, self.gate_12,
-                                    self.gate_13, self.gate_14, self.gate_15, self.gate_16, self.gate_17, self.gate_18,
-                                    self.gate_19, self.gate_20, self.gate_21, self.gate_22, self.gate_23])
-
-        # racing 10 -> 21 -> 2 -> 13 -> 9 -> 14 -> 1 -> 22 -> 15 -> 23 -> 6
-        self.gate_racing = np.array([self.gate_10, self.gate_21, self.gate_2, self.gate_13, self.gate_9, self.gate_14,
-                                     self.gate_1, self.gate_22, self.gate_15, self.gate_23, self.gate_6])
-
-    def get_gate_racing(self, gate_count):
-        return self.gate_racing[0:gate_count+1, :, :]
-
-if __name__ == "__main__":
-
-    gate_location_cls = GateLocation()
-    print gate_location_cls.get_gate_racing(1)

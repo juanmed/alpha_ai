@@ -1,16 +1,10 @@
 from cvxopt import matrix, solvers
-import numpy as np
 
 import compute_p
 import compute_constraint
-import keyframe_generation
-import draw_trajectory
 
-def qp_solution(order, n, gate, t):
-    # generate keyframe
-    keyframe_cls = keyframe_generation.KeyframeGeneration()
-    keyframe = keyframe_cls.keyframe_generation(gate)
 
+def qp_solution(order, n, gate, t, keyframe):
     # compute P, q, A, b
     compute_p_cls = compute_p.ComputeP(6, gate, 1, 1, 4, 2, t)
     P = compute_p_cls.compute_p()
@@ -24,6 +18,5 @@ def qp_solution(order, n, gate, t):
     sol_x = sol['x']            # fval = sol['primal objective']
     # np.savetxt("x.csv", sol_x, delimiter=",")
 
-    #draw_trajectory.draw_trajectory(sol_x, order, gate, n, t)
     return sol_x
 

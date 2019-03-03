@@ -9,6 +9,8 @@ import compute_trajectory
 import df_flat
 import parameter
 import qp_solution
+import draw_trajectory
+import keyframe_generation
 
 
 # parameter
@@ -17,9 +19,19 @@ n = parameter.n
 gate = parameter.gate
 t = parameter.t
 
-sol_x = qp_solution.qp_solution(order, n, gate, t)
+# generate keyframe
+keyframe_cls = keyframe_generation.KeyframeGeneration()
+keyframe = keyframe_cls.keyframe_generation(gate)
+
+# quadratic programming and drawing
+sol_x = qp_solution.qp_solution(order, n, gate, t, keyframe)
+draw_trajectory.draw_trajectory(sol_x, order, gate, n, t, keyframe)
+
+# ros
+rospy.sleep(1)
+
 traj = UAV_traj()
-traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size = 10)
+traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size=10)
 rospy.init_node('trajectory_test1', anonymous=True)
 
 last_time = rospy.get_time()
@@ -30,7 +42,7 @@ i = 0
 while not rospy.is_shutdown():
     now_time = rospy.get_time()
     time = now_time - start_time
-    x = sol_x[n*(order+1)*i: n*(order+1)*(i+1)+1]
+    x = sol_x[n*(order+1)*i: n*(order+1)*(i+1)]
     trajectory = compute_trajectory.compute_trajectory(x, order, time)
     ref_trajectory = df_flat.compute_ref(trajectory)
 
@@ -93,17 +105,15 @@ while not rospy.is_shutdown():
     traj.uc.z = u_b.item(2)
 
     traj_publisher.publish(traj)
-    rospy.loginfo(traj)
+    #rospy.loginfo(traj)
 
     # print state_input
     if now_time - last_time > t[i+1] - t[i]:
-
         print time
         i = i + 1
         last_time = now_time
 
     if i == gate:
-        print time
         exit()
 
     rate.sleep()
