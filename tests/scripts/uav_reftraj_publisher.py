@@ -136,7 +136,7 @@ def pub_traj():
 
 
         except:
-            rospy.loginfo('People...we have a problem')
+            #rospy.loginfo('People...we have a problem')
             continue
 
 

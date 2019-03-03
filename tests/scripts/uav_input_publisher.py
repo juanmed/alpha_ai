@@ -144,8 +144,17 @@ class uav_Input_Publisher():
         
         # publish
         self.input_publisher.publish(rt_msg)
-        rospy.loginfo(Kinv)
+        rospy.loginfo(rt_msg)
         
+    def publish_thrust(self, thrust):
+
+        # create single message
+        thrust_msg = RateThrust()
+        thrust_msg.thrust.z = thrust
+        self.input_publisher.publish(thrust_msg)
+        rospy.loginfo(thrust_msg)
+        rospy.loginfo("Published body vertical thrust: {}".format(thrust))
+
 
 if __name__ == '__main__':
     try:
@@ -154,6 +163,11 @@ if __name__ == '__main__':
         
         uav_input_pub = uav_Input_Publisher()
 
+        rate = rospy.Rate(100)
+        for i in range(10):
+            uav_input_pub.publish_thrust(9.9)  # publish twice: once for initialization
+            #uav_input_pub.publish_thrust(9.9)  # and another to minimize the effect of the 1st one
+            rate.sleep()
 
         rospy.loginfo(' UAV Input Publisher Created !')
         rospy.spin()
