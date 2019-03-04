@@ -72,7 +72,7 @@ class Trajectory_Generator_Test():
         self.order = 6
         self.n = 4
         self.gate = 1
-        self.t = [0, 2]
+        self.t = [0, 5]
 
         # generate keyframe
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
@@ -108,7 +108,7 @@ class Trajectory_Generator_Test():
 
         if (self.i == self.gate):
             print ("Total time: {}".format(time - self.init_time))
-            plt.show()
+            #plt.show()
             exit()
 
         return ref_trajectory
@@ -216,9 +216,9 @@ def pub_traj():
     rospy.sleep(0.1)
  
     # create a trajectory generator
-    traj_gen = Trajectory_Generator()
+    #traj_gen = Trajectory_Generator()
     #traj_gen = Trajectory_Generator2()
-    #traj_gen = Trajectory_Generator_Test()
+    traj_gen = Trajectory_Generator_Test()
     # publish at 10Hz
     rate = rospy.Rate(10.0)
 
