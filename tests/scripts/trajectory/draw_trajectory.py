@@ -24,9 +24,9 @@ def draw_trajectory(solution, order, gate, n, t, keyframe):
             solution[i * n * (order + 1) + 3 * (order + 1): i * n * (order + 1) + (order + 1) + 3 * (order + 1)],
             np.linspace(t[i], t[i + 1], 50)))
 
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    ax.plot(x_trajec, y_trajec, z_trajec)
+    fig = plt.figure(1)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(x_trajec, y_trajec, z_trajec, 'r')
     ax.set_xlim(-60, 60)
     ax.set_ylim(-60, 60)
     ax.set_zlim(-60, 60)
@@ -36,4 +36,3 @@ def draw_trajectory(solution, order, gate, n, t, keyframe):
     keyframe = np.transpose(keyframe)
     for i in range(0, len(keyframe)):
         ax.text(keyframe[i][0], keyframe[i][1], keyframe[i][2], i, color='red')
-    plt.show()

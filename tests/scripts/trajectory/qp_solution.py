@@ -6,7 +6,7 @@ import compute_constraint
 
 def qp_solution(order, n, gate, t, keyframe):
     # compute P, q, A, b
-    compute_p_cls = compute_p.ComputeP(6, gate, 1, 1, 4, 2, t)
+    compute_p_cls = compute_p.ComputeP(order, gate, 1, 1, 4, 2, t)
     P = compute_p_cls.compute_p()
     P = 2 * P
     q = matrix(0.0, (gate*(order+1)*n, 1))
