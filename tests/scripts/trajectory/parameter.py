@@ -3,7 +3,7 @@ import rospy
 import numpy as np
 
 
-level = False
+level = True
 gate = 0
 t = []
 

@@ -22,12 +22,12 @@ class ComputeConstraint:
         constraint_data_r = np.zeros(shape=(self.m, self.k_r, 3))
         if self.k_r >= 1:
             constraint_data_r[0, 0, 0:3] = 0.0
-            constraint_data_r[1:self.m, 0, 0:2] = 0.001
-            constraint_data_r[1:self.m, 0, 2] = 0.001
+            constraint_data_r[1:self.m, 0, 0:2] = 1.1
+            constraint_data_r[1:self.m, 0, 2] = 1.1
         if self.k_r >= 2:
             constraint_data_r[0, 1, 2] = 0.0
-            constraint_data_r[1:self.m, 1, 0:2] = 0.001
-            constraint_data_r[1:self.m, 1, 2] = 0.001
+            constraint_data_r[1:self.m, 1, 0:2] = 1.1
+            constraint_data_r[1:self.m, 1, 2] = 1.1
         if self.k_r >= 3:
             pass
         if self.k_r >= 4:
@@ -114,7 +114,7 @@ class ComputeConstraint:
 
                     continuity = np.zeros(self.n -1)
                     for k in range(0, self.n - 1):
-                        if constraint_data_r[i, h, k] == 0.001:
+                        if constraint_data_r[i, h, k] == 1.1:
                             # Continuity
                             continuity[k] = 1.0         # True
 
@@ -138,7 +138,7 @@ class ComputeConstraint:
                             tempCoeffs = np.polyder(tempCoeffs)
                         values[j] = np.polyval(tempCoeffs, self.t[self.m])
                     for k in range(0, self.n -1):
-                        if constraint_data_r[i, h, k] == 0.001:
+                        if constraint_data_r[i, h, k] == 1.1:
                             pass
                             # Continuity
 
@@ -159,7 +159,7 @@ class ComputeConstraint:
 
                     continuity = np.zeros(self.n - 1)
                     for k in range(0, self.n - 1):
-                        if constraint_data_r[i, h, k] == 0.001:
+                        if constraint_data_r[i, h, k] == 1.1:
                             # Continuity
                             continuity[k] = 1.0        # True
 
@@ -176,7 +176,7 @@ class ComputeConstraint:
 
                     continuity = np.zeros(self.n - 1)
                     for k in range(0, self.n - 1):
-                        if constraint_data_r[i, h, k] == 0.001:
+                        if constraint_data_r[i, h, k] == 1.1:
                             # Continuity
                             continuity[k] = 1.0
 
@@ -252,20 +252,16 @@ class ComputeConstraint:
                           i * (self.order + 1) * self.n + (k + 3) * (self.order + 1) + self.order + 1] = values
                         A3[k + h * 1 + 2 * i * 1 * self.k_psi + 1 * self.k_psi, :] = a
                         b3[k + h * 1 + 2 * i * 1 * self.k_psi + 1 * self.k_psi] = constraint_data_psi[i, h, k]
-        
 
         A3 = matrix(A3)
         b3 = matrix(b3)
-        matrix_rank(A3)
 
         A = matrix([A, A3])
         b = matrix([b, b3])
-        np.size(A)
-
 
         i = 0
         while 1:
-            if b[i] == 0.001:
+            if b[i] == 1.1:
                 b = np.delete(b, i, axis=0)
                 A = np.delete(A, i, axis=0)
                 i = i - 1
@@ -278,9 +274,6 @@ class ComputeConstraint:
 
         A = matrix(A)
         b = matrix(b)
-
-        matrix_rank(A)
-        np.size(A)
 
         return A, b
 

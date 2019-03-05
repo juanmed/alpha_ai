@@ -33,6 +33,10 @@ class Trajectory_Generator():
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
         self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
 
+        # self.gate = 5
+        # self.t = np.array([0, 1, 2, 3, 4, 5, 6])
+        # self.keyframe = self.keyframe_cls.keyframe_generation(5)
+
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
         draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
@@ -77,8 +81,8 @@ class Trajectory_Generator_Test():
         # generate keyframe
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
         self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
-        self.keyframe = np.array([[0.0, 0.0, 1.0, 0.0],
-                                  [0.0, 0.0, 10.0, 0.0]])
+        self.keyframe = np.array([[0.3, 52.0, 2.5, -1*np.pi/2.0],
+                                  [0.3, 52.0, 5, -1*np.pi/2.0]])
         self.keyframe = np.transpose(self.keyframe)
 
         # compute flat output trajectory
@@ -108,7 +112,7 @@ class Trajectory_Generator_Test():
 
         if (self.i == self.gate):
             print ("Total time: {}".format(time - self.init_time))
-            #plt.show()
+            plt.show()
             exit()
 
         return ref_trajectory
@@ -219,6 +223,7 @@ def pub_traj():
     #traj_gen = Trajectory_Generator()
     #traj_gen = Trajectory_Generator2()
     traj_gen = Trajectory_Generator_Test()
+
     # publish at 10Hz
     rate = rospy.Rate(10.0)
 

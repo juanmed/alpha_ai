@@ -3,7 +3,7 @@
 import rospy
 from tests.msg import UAV_traj
 from mav_msgs.msg import RateThrust
-
+import numpy as np
 
 class Thrust_Test:
     def __init__(self):
@@ -15,18 +15,19 @@ class Thrust_Test:
 
     def callback(self, msg):
         rt_msg = RateThrust()
-        rt_msg.thrust.z = msg.ua.z + 9.8
+        t = np.array([msg.ua.x, msg.ua.y, msg.ua.z+9.81])
+        norm = np.linalg.norm(t)
+        rt_msg.thrust.z = norm
+
+        rt_msg.angular_rates.x = msg.twist.angular.x
+        rt_msg.angular_rates.y = msg.twist.angular.y
+        rt_msg.angular_rates.z = msg.twist.angular.z
         self.thrust_publisher.publish(rt_msg)
 
 if __name__ == '__main__':
     try:
         # init node
         rospy.init_node('Thrust_Test_publisher', anonymous = True)
-
-        # send take off command
-        # this must be sent in order for the drone to receive commands
-        #to_publisher = rospy.Publisher("/uav/input/takeoff", Empty, 5)
-        #to_publisher.publish(Empty())
 
         # create an rateThrust_Publisher object
         rtp = Thrust_Test()

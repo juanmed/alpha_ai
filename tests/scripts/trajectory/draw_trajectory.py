@@ -24,6 +24,9 @@ def draw_trajectory(solution, order, gate, n, t, keyframe):
             solution[i * n * (order + 1) + 3 * (order + 1): i * n * (order + 1) + (order + 1) + 3 * (order + 1)],
             np.linspace(t[i], t[i + 1], 50)))
 
+    #print x_trajec
+    #print psi_trajec
+
     fig = plt.figure(1)
     ax = fig.add_subplot(111, projection='3d')
     ax.plot(x_trajec, y_trajec, z_trajec, 'r')
