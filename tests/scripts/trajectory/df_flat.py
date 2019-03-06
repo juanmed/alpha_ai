@@ -145,7 +145,7 @@ def get_wz_dot(psi_acc, x_c, x_b, psi_rate, w_z, y_b, w_y, z_b, w_x, y_c, w_y_do
     a = psi_acc * (x_c.T) * x_b
     b = 2.0 * psi_rate * w_z * (x_c.T) * y_b
     c = -2.0 * psi_rate * w_y * (x_c.T) * z_b
-    d = -1.0 * w_x * w_y * (y_c.T) * z_b
+    d = -1.0 * w_x * w_y * (y_c.T) * y_b
     e = -1.0 * w_x * w_z * (y_c.T) * z_b
     f = w_y_dot * (y_c.T) * z_b
     g = np.linalg.norm(np.cross(y_c, z_b, axis=0))
@@ -285,7 +285,7 @@ def compute_ref(trajectory):
     # because that is the result from the differential flatness output selection
 
     #return [pos_traj.T, vel_traj.T, or_, w_, acc_traj.T, w_dot_, u_c, u_1, u_x]
-    return [pos_traj.T, vel_traj.T, w_, or_, u_a, u_b, u_c]
+    return [pos_traj.T, vel_traj.T, or_, w_, u_a, u_b, u_c]
 
 
 """
