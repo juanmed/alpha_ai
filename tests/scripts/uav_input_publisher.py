@@ -168,7 +168,80 @@ class uav_Input_Publisher():
         phi, theta, psi = tf.transformations.euler_from_quaternion(ori_quat, axes = 'rzyx')
         p, q, r = [state_msg.twist.angular.x, state_msg.twist.angular.y, state_msg.twist.angular.z]
 
+        # x position dynamics control law
+        x_state = np.array([[x],[vx]])
+        ua_e_x = -1.0*np.dot(self.Kt_lqr,x_state) + (self.N_ut_lqr + np.dot(self.Kt_lqr,self.N_xt_lqr))*x_r
+        # y position dynamics control law
+        y_state = np.array([[y],[vy]])
+        ua_e_y = -1.0*np.dot(self.Kt_lqr,y_state) + (self.N_ut_lqr + np.dot(self.Kt_lqr,self.N_xt_lqr))*y_r
+        # z position dynamics control law
+        z_state = np.array([[z],[vz]])
+        ua_e_z = -1.0*np.dot(self.Kt_lqr,z_state) + (self.N_ut_lqr + np.dot(self.Kt_lqr,self.N_xt_lqr))*z_r
+
+        # compose position dynamics input vector
+        #ua_e = np.array([[ua_e_x[0]],[ua_e_y[0]],[ua_e_z[0]]])
+
+
+        # phi (x axis) angular position dynamics control law
+        uc_e_x = -1.0*self.Kr_lqr*phi + (self.N_ur_lqr + np.dot(self.Kr_lqr,self.N_xr_lqr))*phi_r
+        # theta (y axis) angular position dynamics control law
+        uc_e_y = -1.0*self.Kr_lqr*theta + (self.N_ur_lqr + np.dot(self.Kr_lqr,self.N_xr_lqr))*theta_r
+        # psi (z axis) angular position dynamics control law
+        uc_e_z = -1.0*self.Kr_lqr*psi + (self.N_ur_lqr + np.dot(self.Kr_lqr,self.N_xr_lqr))*psi_r
+
+        #compose angular position dynamics input vector
+        #uc_e = np.array([[uc_e_x[0]],[uc_e_y[0]],[uc_e_z[0]]])
+
+
+        # the final input to the drone is u = u_e + u_r
+        # input =  error_input + reference_input
+        uax, uay, uaz = [traj_msg.ua.x + ua_e_x[0], traj_msg.ua.y + ua_e_y[0], traj_msg.ua.z + ua_e_z[0]] 
+        ucx, ucy, ucz = [traj_msg.uc.x + uc_e_x[0], traj_msg.uc.y + uc_e_y[0], traj_msg.uc.z + uc_e_z[0]]
+
+        ua = np.array([[uax], [uay], [uaz]])
+        uc = np.array([[ucx], [ucy], [ucz]])
+        #print(ua,uc)
+
+        # compute Thrust -T- as
+        #   T = m*wzb.T*(ua + g*zw)
+        #
+        zb = np.array([[0.0],[0.0],[1.0]])  #  z axis of body expressed in body frame
+        zw = np.array([[0.0],[0.0],[1.0]])  #  z axis of world frame expressed in world frame 
+        Rwb = tf.transformations.euler_matrix(psi_r, theta_r, phi_r, axes='rzyx') # world to body frame rotation
+        Rbw = Rwb[0:3,0:3].T  # body to world frame rotation only
+
+        wzb = np.dot(Rbw,zb) # zb expressed in world frame
+        T =  self.m*np.dot(wzb.T,(ua + g*zw))[0]
+        #print(wzb.T,type(wzb))
+
+        # compute w_b angular velocity commands as
+        #  w_b = K.inv * uc
+        #  where  (euler angle derivate) = K*w_b
+        K = np.array([[1.0, np.sin(phi_r)*np.tan(theta_r), np.cos(phi_r)*np.tan(theta_r)],
+                      [0.0, np.cos(phi_r), -1.0*np.sin(phi_r)],
+                      [0.0, np.sin(phi_r)/np.cos(theta_r), np.cos(phi_r)/np.cos(theta_r)]])
+
+        Kinv = np.linalg.inv(K)
+
+        w_b = np.dot(Kinv, uc).flatten()
+
+        # create and fill message
+        rt_msg = RateThrust()
         
+        rt_msg.header.stamp = rospy.Time.now()
+        rt_msg.header.frame_id = 'uav/imu'
+
+        rt_msg.angular_rates.x = w_b[0] #traj_msg.twist.angular.x
+        rt_msg.angular_rates.y = w_b[1] #traj_msg.twist.angular.y
+        rt_msg.angular_rates.z = w_b[2] #traj_msg.twist.angular.z
+
+        rt_msg.thrust.x = 0.0
+        rt_msg.thrust.y = 0.0
+        rt_msg.thrust.z = T[0] # self.m*np.linalg.norm(t)
+        
+        # publish
+        self.input_publisher.publish(rt_msg)
+        rospy.loginfo(rt_msg)
 
 
     def publish_thrust(self, thrust):
