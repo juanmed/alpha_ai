@@ -82,7 +82,7 @@ class Trajectory_Generator_Test():
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
         self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
         self.keyframe = np.array([[0.3, 52.0, 2.5, -1*np.pi/2.0],
-                                  [0.3, 52.0, 5, -1*np.pi/2.0]])
+                                  [0.3, 52.0, 10, -1*np.pi/2.0]])
         self.keyframe = np.transpose(self.keyframe)
 
         # compute flat output trajectory
