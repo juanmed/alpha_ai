@@ -39,7 +39,7 @@ class Trajectory_Generator():
 
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
+        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -150,7 +150,7 @@ class Trajectory_Generator2():
 
 
     def compute_reference_traj(self, time):
-        vel = 1.2
+        vel = 3
         trajectory_time = time - self.start_time
         #print("Time traj: {}".format(trajectory_time))
         flatout_trajectory = trajGen3D.generate_trajectory(trajectory_time, vel, self.waypoints, self.coeff_x, self.coeff_y, self.coeff_z)
@@ -221,11 +221,11 @@ def pub_traj():
  
     # create a trajectory generator
     #traj_gen = Trajectory_Generator()
-    #traj_gen = Trajectory_Generator2()
-    traj_gen = Trajectory_Generator_Test()
+    traj_gen = Trajectory_Generator2()
+    #traj_gen = Trajectory_Generator_Test()
 
     # publish at 10Hz
-    rate = rospy.Rate(10.0)
+    rate = rospy.Rate(100.0)
 
     x_line = []
     y_line = []
@@ -293,10 +293,12 @@ def pub_traj():
             traj.uc.y = ucy
             traj.uc.z = ucz
 
+            """
             x_line = np.append(x_line, x)
             y_line = np.append(y_line, y)
             z_line = np.append(z_line, z)
 
+            
             fig = plt.figure(2)
             ax = fig.add_subplot(111, projection='3d')
             ax.plot(x_line, y_line, z_line, '.', color='b')
@@ -306,7 +308,7 @@ def pub_traj():
             ax.set_xlabel('x label')
             ax.set_ylabel('y label')
             ax.set_zlabel('z label')
-
+            """
             # publish message
             traj_publisher.publish(traj)
             rospy.loginfo(traj)

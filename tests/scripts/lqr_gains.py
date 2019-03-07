@@ -182,8 +182,9 @@ if __name__ == '__main__':
 	Rr = np.array([1.0])
 
 	# Desired pole locations for pole placement method
-	dpt = np.array([-3.0+5j,-3.0-5j])
-	dpr = np.array([-4.0])
+	# translation and rotatin dynamics poles
+	dpt = np.array([-3.0+10j,-3.0-10j])
+	dpr = np.array([-8.0])
 
 	Kt_lqr, N_ut_lqr, N_xt_lqr = calculate_LQR_gains(At,Bt,Ct,D_,Qt,Rt)
 	Kr_lqr, N_ur_lqr, N_xr_lqr = calculate_LQR_gains(Ar,Br,Cr,D_,Qr,Rr)

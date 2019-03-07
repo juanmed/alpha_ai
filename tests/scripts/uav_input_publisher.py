@@ -28,11 +28,12 @@ class uav_Input_Publisher():
         self.reftraj_sub = message_filters.Subscriber('/uav_ref_trajectory', UAV_traj)
 
         # filter messages based on time
-        ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.1)
+        ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.01)
         ts.registerCallback(self.callback2)
 
         self.m = rospy.get_param("/uav/flightgoggles_uav_dynamics/vehicle_mass")
 
+        # LQR PERFORMANCE MATRICES
         # output performance matrix for translation variables
         self.Qt = np.diag([100.0,1.0])
         # input effort matrix for translation variables
@@ -42,9 +43,20 @@ class uav_Input_Publisher():
         # input effort matrix for rotational variables
         self.Rr = np.array([1.0])
 
-        # get controller gains
-        self.Kt_lqr, self.N_ut_lqr, self.N_xt_lqr = lqrg.calculate_LQR_gains(lqrg.At, lqrg.Bt, lqrg.Ct, lqrg.D_, self.Qt, self.Rt)
-        self.Kr_lqr, self.N_ur_lqr, self.N_xr_lqr = lqrg.calculate_LQR_gains(lqrg.Ar, lqrg.Br, lqrg.Cr, lqrg.D_, self.Qr, self.Rr)
+        # get controller gains with LQR method
+        #self.Kt, self.N_ut, self.N_xt = lqrg.calculate_LQR_gains(lqrg.At, lqrg.Bt, lqrg.Ct, lqrg.D_, self.Qt, self.Rt)
+        #self.Kr, self.N_ur, self.N_xr = lqrg.calculate_LQR_gains(lqrg.Ar, lqrg.Br, lqrg.Cr, lqrg.D_, self.Qr, self.Rr)
+
+
+        # POLE PLACEMENT DESIRED POLES
+        # Desired pole locations for pole placement method, for more aggresive tracking
+        self.dpt = np.array([-3.0+10j,-3.0-10j])
+        self.dpr = np.array([-8.0])
+
+        # get controller gains with Pole Placement Method
+        self.Kt, self.N_ut, self.N_xt = lqrg.calculate_pp_gains(lqrg.At, lqrg.Bt, lqrg.Ct, lqrg.D_, self.dpt)
+        self.Kr, self.N_ur, self.N_xr = lqrg.calculate_pp_gains(lqrg.Ar, lqrg.Br, lqrg.Cr, lqrg.D_, self.dpr)
+
 
         # send one message with Thrust > 10 for uav/sensors/imu to start
         #rt_msg = RateThrust()
@@ -65,14 +77,14 @@ class uav_Input_Publisher():
         x_r, y_r, z_r = [traj_msg.pose.position.x, traj_msg.pose.position.y, traj_msg.pose.position.z]
         vx_r, vy_r, vz_r = [traj_msg.twist.linear.x, traj_msg.twist.linear.y, traj_msg.twist.linear.z] 
         ori_quat_r = [traj_msg.pose.orientation.x, traj_msg.pose.orientation.y, traj_msg.pose.orientation.z, traj_msg.pose.orientation.w]
-        phi_r, theta_r, psi_r = tf.transformations.euler_from_quaternion(ori_quat_r, axes = 'rzyx')
+        psi_r, theta_r, phi_r = tf.transformations.euler_from_quaternion(ori_quat_r, axes = 'rzyx')
         p_r, q_r, r_r = [traj_msg.twist.angular.x, traj_msg.twist.angular.y, traj_msg.twist.angular.z]
 
         # extract drone real state values
         x, y, z = [state_msg.pose.position.x, state_msg.pose.position.y, state_msg.pose.position.z]
         vx, vy, vz = [state_msg.twist.linear.x, state_msg.twist.linear.y, state_msg.twist.linear.z]
         ori_quat = [state_msg.pose.orientation.x, state_msg.pose.orientation.y, state_msg.pose.orientation.z, state_msg.pose.orientation.w]
-        phi, theta, psi = tf.transformations.euler_from_quaternion(ori_quat, axes = 'rzyx')
+        psi, theta, phi = tf.transformations.euler_from_quaternion(ori_quat, axes = 'rzyx')
         p, q, r = [state_msg.twist.angular.x, state_msg.twist.angular.y, state_msg.twist.angular.z]
 
         #compute state error:  error = reference - real
@@ -83,14 +95,14 @@ class uav_Input_Publisher():
 
         # compute input error u = -Kx
         # first, for translation dynamics
-        ua_e_x = -1.0*np.dot(self.Kt_lqr,np.array([[x_e],[vx_e]]))[0]
-        ua_e_y = -1.0*np.dot(self.Kt_lqr,np.array([[y_e],[vy_e]]))[0]
-        ua_e_z = -1.0*np.dot(self.Kt_lqr,np.array([[z_e],[vz_e]]))[0]
+        ua_e_x = -1.0*np.dot(self.Kt,np.array([[x_e],[vx_e]]))[0]
+        ua_e_y = -1.0*np.dot(self.Kt,np.array([[y_e],[vy_e]]))[0]
+        ua_e_z = -1.0*np.dot(self.Kt,np.array([[z_e],[vz_e]]))[0]
 
         # second, for orientation dynamics
-        uc_e_x = -1.0*np.dot(self.Kr_lqr,np.array([phi_e]))
-        uc_e_y = -1.0*np.dot(self.Kr_lqr,np.array([theta_e]))
-        uc_e_z = -1.0*np.dot(self.Kr_lqr,np.array([psi_e]))
+        uc_e_x = -1.0*np.dot(self.Kr,np.array([phi_e]))
+        uc_e_y = -1.0*np.dot(self.Kr,np.array([theta_e]))
+        uc_e_z = -1.0*np.dot(self.Kr,np.array([psi_e]))
         #print("uc_e_x: {} type: {}".format(uc_e_x,type(uc_e_x)) )
         #print("ua_e_x: {} type: {}".format(ua_e_x,type(ua_e_x)) )
 
@@ -158,36 +170,36 @@ class uav_Input_Publisher():
         x_r, y_r, z_r = [traj_msg.pose.position.x, traj_msg.pose.position.y, traj_msg.pose.position.z]
         vx_r, vy_r, vz_r = [traj_msg.twist.linear.x, traj_msg.twist.linear.y, traj_msg.twist.linear.z] 
         ori_quat_r = [traj_msg.pose.orientation.x, traj_msg.pose.orientation.y, traj_msg.pose.orientation.z, traj_msg.pose.orientation.w]
-        phi_r, theta_r, psi_r = tf.transformations.euler_from_quaternion(ori_quat_r, axes = 'rzyx')
+        psi_r, theta_r, phi_r = tf.transformations.euler_from_quaternion(ori_quat_r, axes = 'rzyx')
         p_r, q_r, r_r = [traj_msg.twist.angular.x, traj_msg.twist.angular.y, traj_msg.twist.angular.z]
 
         # extract drone real state values
         x, y, z = [state_msg.pose.position.x, state_msg.pose.position.y, state_msg.pose.position.z]
         vx, vy, vz = [state_msg.twist.linear.x, state_msg.twist.linear.y, state_msg.twist.linear.z]
         ori_quat = [state_msg.pose.orientation.x, state_msg.pose.orientation.y, state_msg.pose.orientation.z, state_msg.pose.orientation.w]
-        phi, theta, psi = tf.transformations.euler_from_quaternion(ori_quat, axes = 'rzyx')
+        psi, theta, phi = tf.transformations.euler_from_quaternion(ori_quat, axes = 'rzyx')
         p, q, r = [state_msg.twist.angular.x, state_msg.twist.angular.y, state_msg.twist.angular.z]
 
         # x position dynamics control law
         x_state = np.array([[x],[vx]])
-        ua_e_x = -1.0*np.dot(self.Kt_lqr,x_state) + (self.N_ut_lqr + np.dot(self.Kt_lqr,self.N_xt_lqr))*x_r
+        ua_e_x = -1.0*np.dot(self.Kt,x_state) + (self.N_ut + np.dot(self.Kt,self.N_xt))*x_r
         # y position dynamics control law
         y_state = np.array([[y],[vy]])
-        ua_e_y = -1.0*np.dot(self.Kt_lqr,y_state) + (self.N_ut_lqr + np.dot(self.Kt_lqr,self.N_xt_lqr))*y_r
+        ua_e_y = -1.0*np.dot(self.Kt,y_state) + (self.N_ut + np.dot(self.Kt,self.N_xt))*y_r
         # z position dynamics control law
         z_state = np.array([[z],[vz]])
-        ua_e_z = -1.0*np.dot(self.Kt_lqr,z_state) + (self.N_ut_lqr + np.dot(self.Kt_lqr,self.N_xt_lqr))*z_r
+        ua_e_z = -1.0*np.dot(self.Kt,z_state) + (self.N_ut + np.dot(self.Kt,self.N_xt))*z_r
 
         # compose position dynamics input vector
         #ua_e = np.array([[ua_e_x[0]],[ua_e_y[0]],[ua_e_z[0]]])
 
 
         # phi (x axis) angular position dynamics control law
-        uc_e_x = -1.0*self.Kr_lqr*phi + (self.N_ur_lqr + np.dot(self.Kr_lqr,self.N_xr_lqr))*phi_r
+        uc_e_x = -1.0*self.Kr*phi + (self.N_ur + np.dot(self.Kr,self.N_xr))*phi_r
         # theta (y axis) angular position dynamics control law
-        uc_e_y = -1.0*self.Kr_lqr*theta + (self.N_ur_lqr + np.dot(self.Kr_lqr,self.N_xr_lqr))*theta_r
+        uc_e_y = -1.0*self.Kr*theta + (self.N_ur + np.dot(self.Kr,self.N_xr))*theta_r
         # psi (z axis) angular position dynamics control law
-        uc_e_z = -1.0*self.Kr_lqr*psi + (self.N_ur_lqr + np.dot(self.Kr_lqr,self.N_xr_lqr))*psi_r
+        uc_e_z = -1.0*self.Kr*psi + (self.N_ur + np.dot(self.Kr,self.N_xr))*psi_r
 
         #compose angular position dynamics input vector
         #uc_e = np.array([[uc_e_x[0]],[uc_e_y[0]],[uc_e_z[0]]])
@@ -207,7 +219,7 @@ class uav_Input_Publisher():
         #
         zb = np.array([[0.0],[0.0],[1.0]])  #  z axis of body expressed in body frame
         zw = np.array([[0.0],[0.0],[1.0]])  #  z axis of world frame expressed in world frame 
-        Rwb = tf.transformations.euler_matrix(psi_r, theta_r, phi_r, axes='rzyx') # world to body frame rotation
+        Rwb = tf.transformations.euler_matrix(psi, theta, phi, axes='rzyx') # world to body frame rotation
         Rbw = Rwb[0:3,0:3].T  # body to world frame rotation only
 
         wzb = np.dot(Rbw,zb) # zb expressed in world frame
