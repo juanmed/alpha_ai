@@ -16,6 +16,8 @@ import trajectory.qp_solution as qp_solution
 import trajectory.keyframe_generation as keyframe_generation
 import trajectory.draw_trajectory as draw_trajectory
 import trajectory.trajgen2_helper as trajGen3D
+import matplotlib.pyplot as plt
+
 
 class Trajectory_Generator():
 
@@ -31,9 +33,13 @@ class Trajectory_Generator():
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
         self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
 
+        # self.gate = 5
+        # self.t = np.array([0, 1, 2, 3, 4, 5, 6])
+        # self.keyframe = self.keyframe_cls.keyframe_generation(5)
+
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
-        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -57,9 +63,59 @@ class Trajectory_Generator():
 
         if (self.i == self.gate):
             print ("Total time: {}".format(time-self.init_time))
+            plt.show()
             exit()
 
         return ref_trajectory 
+
+class Trajectory_Generator_Test():
+
+    def __init__(self):
+
+        # init parameters
+        self.order = 6
+        self.n = 4
+        self.gate = 1
+        self.t = [0, 5]
+
+        # generate keyframe
+        self.keyframe_cls = keyframe_generation.KeyframeGeneration()
+        self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
+        self.keyframe = np.array([[0.3, 52.0, 2.5, -1*np.pi/2.0],
+                                  [0.3, 52.0, 10, -1*np.pi/2.0]])
+        self.keyframe = np.transpose(self.keyframe)
+
+        # compute flat output trajectory
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
+
+        # initialize time
+        self.init_time = rospy.get_time()
+        self.last_time = rospy.get_time()
+        self.start_time = self.last_time
+
+        # start in trajectory from 1st gate to 2nd gate
+        self.i = 0
+
+    def compute_reference_traj(self, time):
+
+        ref_time = time - self.start_time
+        x = self.sol_x[self.n * (self.order + 1) * self.i: self.n * (self.order + 1) * (self.i + 1)]
+        flatout_trajectory = compute_trajectory.compute_trajectory(x, self.order, ref_time)
+        ref_trajectory = df_flat.compute_ref(flatout_trajectory)
+
+        if (time - self.last_time) > (self.t[self.i + 1] - self.t[self.i]):
+            # print time - self.last_time
+            # print ref_time
+            self.i = self.i + 1  # trajectory to next gate
+            self.last_time = time
+
+        if (self.i == self.gate):
+            print ("Total time: {}".format(time - self.init_time))
+            plt.show()
+            exit()
+
+        return ref_trajectory
 
 class Trajectory_Generator2():
     def __init__(self):
@@ -164,11 +220,16 @@ def pub_traj():
     rospy.sleep(0.1)
  
     # create a trajectory generator
-    traj_gen = Trajectory_Generator2()
+    #traj_gen = Trajectory_Generator()
+    #traj_gen = Trajectory_Generator2()
+    traj_gen = Trajectory_Generator_Test()
 
     # publish at 10Hz
-    rate = rospy.Rate(100.0)
+    rate = rospy.Rate(10.0)
 
+    x_line = []
+    y_line = []
+    z_line = []
 
     while not rospy.is_shutdown():
         
@@ -231,6 +292,20 @@ def pub_traj():
             traj.uc.x = ucx
             traj.uc.y = ucy
             traj.uc.z = ucz
+
+            x_line = np.append(x_line, x)
+            y_line = np.append(y_line, y)
+            z_line = np.append(z_line, z)
+
+            fig = plt.figure(2)
+            ax = fig.add_subplot(111, projection='3d')
+            ax.plot(x_line, y_line, z_line, '.', color='b')
+            ax.set_xlim(-60, 60)
+            ax.set_ylim(-60, 60)
+            ax.set_zlim(-60, 60)
+            ax.set_xlabel('x label')
+            ax.set_ylabel('y label')
+            ax.set_zlabel('z label')
 
             # publish message
             traj_publisher.publish(traj)

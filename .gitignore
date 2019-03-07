@@ -1,3 +1,4 @@
 CMakeLists.txt
 **/*.pyc
 tests/scripts/.idea/*
+tests/scripts/trajectory/.idea/*
