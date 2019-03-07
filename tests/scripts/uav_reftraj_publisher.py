@@ -67,7 +67,7 @@ class Trajectory_Generator2():
         # first compute waypoints: the first one is the initial position
         # and orientation, and the rest are the position of the gates
 
-        self.waypoints = self.get_vertical_waypoints()
+        self.waypoints = self.get_gate_waypoints()
         print("Waypoints: ")
         print(self.waypoints)
         (self.coeff_x, self.coeff_y, self.coeff_z) = trajGen3D.get_MST_coefficients(self.waypoints)
@@ -94,7 +94,7 @@ class Trajectory_Generator2():
 
 
     def compute_reference_traj(self, time):
-        vel = 5
+        vel = 1.2
         trajectory_time = time - self.start_time
         #print("Time traj: {}".format(trajectory_time))
         flatout_trajectory = trajGen3D.generate_trajectory(trajectory_time, vel, self.waypoints, self.coeff_x, self.coeff_y, self.coeff_z)

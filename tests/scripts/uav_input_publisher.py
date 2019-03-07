@@ -29,7 +29,7 @@ class uav_Input_Publisher():
 
         # filter messages based on time
         ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.1)
-        ts.registerCallback(self.callback)
+        ts.registerCallback(self.callback2)
 
         self.m = rospy.get_param("/uav/flightgoggles_uav_dynamics/vehicle_mass")
 
@@ -47,9 +47,9 @@ class uav_Input_Publisher():
         self.Kr_lqr, self.N_ur_lqr, self.N_xr_lqr = lqrg.calculate_LQR_gains(lqrg.Ar, lqrg.Br, lqrg.Cr, lqrg.D_, self.Qr, self.Rr)
 
         # send one message with Thrust > 10 for uav/sensors/imu to start
-        rt_msg = RateThrust()
-        rt_msg.thrust.z = 10
-        self.input_publisher.publish(rt_msg)
+        #rt_msg = RateThrust()
+        #rt_msg.thrust.z = 10
+        #self.input_publisher.publish(rt_msg)
 
 
     def callback(self, state_msg, traj_msg):
@@ -76,12 +76,12 @@ class uav_Input_Publisher():
         p, q, r = [state_msg.twist.angular.x, state_msg.twist.angular.y, state_msg.twist.angular.z]
 
         #compute state error:  error = reference - real
-        x_e, y_e, z_e = [x_r - x, y_r - y, z_r - z]
-        vx_e, vy_e, vz_e = [vx_r - vx, vy_r - vy, vz_r - vz]
-        phi_e, theta_e, psi_e = [phi_r - phi, theta_r - theta, psi_r - psi]
-        p_e, q_e, r_e = [p_r - p, q_r - q, r_r -r]
+        x_e, y_e, z_e = [x - x_r, y - y_r, z - z_r]
+        vx_e, vy_e, vz_e = [vx - vx_r, vy - vy_r, vz - vz_r]
+        phi_e, theta_e, psi_e = [phi - phi_r, theta - theta_r, psi - psi_r]
+        p_e, q_e, r_e = [p - p_r, q - q_r, r -r_r]
 
-        # compute input error 
+        # compute input error u = -Kx
         # first, for translation dynamics
         ua_e_x = -1.0*np.dot(self.Kt_lqr,np.array([[x_e],[vx_e]]))[0]
         ua_e_y = -1.0*np.dot(self.Kt_lqr,np.array([[y_e],[vy_e]]))[0]
@@ -195,8 +195,8 @@ class uav_Input_Publisher():
 
         # the final input to the drone is u = u_e + u_r
         # input =  error_input + reference_input
-        uax, uay, uaz = [traj_msg.ua.x + ua_e_x[0], traj_msg.ua.y + ua_e_y[0], traj_msg.ua.z + ua_e_z[0]] 
-        ucx, ucy, ucz = [traj_msg.uc.x + uc_e_x[0], traj_msg.uc.y + uc_e_y[0], traj_msg.uc.z + uc_e_z[0]]
+        uax, uay, uaz = [traj_msg.ua.x + ua_e_x.item(0), traj_msg.ua.y + ua_e_y.item(0), traj_msg.ua.z + ua_e_z.item(0)] 
+        ucx, ucy, ucz = [traj_msg.uc.x + uc_e_x.item(0), traj_msg.uc.y + uc_e_y.item(0), traj_msg.uc.z + uc_e_z.item(0)]
 
         ua = np.array([[uax], [uay], [uaz]])
         uc = np.array([[ucx], [ucy], [ucz]])
@@ -262,6 +262,8 @@ if __name__ == '__main__':
         uav_input_pub = uav_Input_Publisher()
 
         rate = rospy.Rate(100)
+
+        # Send some thrust commands for simulator to start publishing IMU
         for i in range(10):
             uav_input_pub.publish_thrust(9.9)  # publish twice: once for initialization
             #uav_input_pub.publish_thrust(9.9)  # and another to minimize the effect of the 1st one

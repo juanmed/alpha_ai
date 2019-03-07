@@ -33,7 +33,7 @@ class uavStatePublisher():
 		# where we combine info and create and send a message containing
 		# uav's state
 		#ts = message_filters.TimeSynchronizer([self.pose_sub, self.imu_sub], 10)
-		ts = message_filters.ApproximateTimeSynchronizer([self.pose_sub, self.imu_sub], 10, 0.1)
+		ts = message_filters.ApproximateTimeSynchronizer([self.pose_sub, self.imu_sub], 10, 0.01)
 		ts.registerCallback(self.callback)
 
 		# define variables to compute linear velocity from imu
