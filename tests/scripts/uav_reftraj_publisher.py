@@ -6,6 +6,7 @@
 
 import rospy
 from tests.msg import UAV_traj
+from tests.msg import UAV_input
 import tf
 import numpy as np
 
@@ -209,9 +210,11 @@ def pub_traj():
 
     # create topic for publishing ref trajectory
     traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size = 10)
+    input_publisher = rospy.Publisher('uav_input', UAV_input, queue_size = 10)
 
     # init node
-    rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
+    # rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
+    rospy.init_node('uav_ref_trajectory_input_publisher', anonymous=True)
 
     # IMPORTANT WAIT TIME! 
     # If this is not here, the "start_time" in the trajectory generator is 
@@ -245,6 +248,10 @@ def pub_traj():
             traj.header.stamp = rospy.Time.now()
             traj.header.frame_id = ""
 
+            input = UAV_input()
+            input.header.stamp = rospy.Time.now()
+            input.header.frame_id = ""
+
             
             # get all values... we need to do this becuase ref_traj contains old, ugly np.matrix
             # objects >:(
@@ -255,6 +262,11 @@ def pub_traj():
             uax, uay, uaz = np.array(ref_traj[4]).flatten()
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
+
+            # Input (T, M) publisher to be used in estimation
+            u_1 = np.array(ref_traj[7]).flatten()
+            u_xx, u_xy, u_xz = np.array(ref_traj[8]).flatten()
+
 
             traj.pose.position.x = x
             traj.pose.position.y = y
@@ -293,6 +305,11 @@ def pub_traj():
             traj.uc.y = ucy
             traj.uc.z = ucz
 
+            input.T = u_1
+            input.M.x = u_xx
+            input.M.y = u_xy
+            input.M.z = u_xz
+
             """
             x_line = np.append(x_line, x)
             y_line = np.append(y_line, y)
@@ -311,6 +328,7 @@ def pub_traj():
             """
             # publish message
             traj_publisher.publish(traj)
+            input_publisher.publish(input)
             rospy.loginfo(traj)
             rate.sleep()
 
