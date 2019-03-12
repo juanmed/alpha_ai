@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-import cv2
 import numpy as np
 from numpy.linalg import inv, multi_dot
 from scipy.signal import cont2discrete
