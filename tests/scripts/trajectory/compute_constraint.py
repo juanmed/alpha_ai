@@ -1,6 +1,5 @@
 import numpy as np
 from cvxopt import matrix
-from numpy.linalg import matrix_rank
 
 
 class ComputeConstraint:
@@ -22,12 +21,12 @@ class ComputeConstraint:
         constraint_data_r = np.zeros(shape=(self.m, self.k_r, 3))
         if self.k_r >= 1:
             constraint_data_r[0, 0, 0:3] = 0.0
-            constraint_data_r[1:self.m, 0, 0:2] = 1.1
-            constraint_data_r[1:self.m, 0, 2] = 1.1
+            constraint_data_r[1:self.m, 0, 0:2] = 1
+            constraint_data_r[1:self.m, 0, 2] = 1
         if self.k_r >= 2:
             constraint_data_r[0, 1, 2] = 0.0
-            constraint_data_r[1:self.m, 1, 0:2] = 1.1
-            constraint_data_r[1:self.m, 1, 2] = 1.1
+            constraint_data_r[1:self.m, 1, 0:2] = 1
+            constraint_data_r[1:self.m, 1, 2] = 1
         if self.k_r >= 3:
             pass
         if self.k_r >= 4:
@@ -99,7 +98,7 @@ class ComputeConstraint:
 
         # position, yaw excluded here (n-1)
         A2 = np.zeros((2 * self.m * (self.n - 1) * self.k_r, self.n * (self.order + 1) * self.m))
-        b2 = np.ones((2 * self.m * (self.n - 1) * self.k_r, 1))
+        b2 = np.ones((2 * self.m * (self.n - 1) * self.k_r, 1)) * 0.001
 
         for i in range(0, self.m):
             for h in range(0, self.k_r):
@@ -114,7 +113,7 @@ class ComputeConstraint:
 
                     continuity = np.zeros(self.n -1)
                     for k in range(0, self.n - 1):
-                        if constraint_data_r[i, h, k] == 1.1:
+                        if constraint_data_r[i, h, k] == 1:
                             # Continuity
                             continuity[k] = 1.0         # True
 
@@ -138,7 +137,7 @@ class ComputeConstraint:
                             tempCoeffs = np.polyder(tempCoeffs)
                         values[j] = np.polyval(tempCoeffs, self.t[self.m])
                     for k in range(0, self.n -1):
-                        if constraint_data_r[i, h, k] == 1.1:
+                        if constraint_data_r[i, h, k] == 1:
                             pass
                             # Continuity
 
@@ -159,7 +158,7 @@ class ComputeConstraint:
 
                     continuity = np.zeros(self.n - 1)
                     for k in range(0, self.n - 1):
-                        if constraint_data_r[i, h, k] == 1.1:
+                        if constraint_data_r[i, h, k] == 1:
                             # Continuity
                             continuity[k] = 1.0        # True
 
@@ -176,7 +175,7 @@ class ComputeConstraint:
 
                     continuity = np.zeros(self.n - 1)
                     for k in range(0, self.n - 1):
-                        if constraint_data_r[i, h, k] == 1.1:
+                        if constraint_data_r[i, h, k] == 1:
                             # Continuity
                             continuity[k] = 1.0
 
@@ -185,6 +184,7 @@ class ComputeConstraint:
                             a[i * (self.order+1) * self.n + k * (self.order+1): i * (self.order+1) * self.n + k * (self.order+1) + self.order + 1] = values
                             A2[k + h*(self.n - 1) + 2*i*(self.n -1)*self.k_r + (self.n-1)*self.k_r, :] = a
                             b2[k + h*(self.n - 1) + 2*i*(self.n -1)*self.k_r + (self.n-1)*self.k_r] = constraint_data_r[i, h, k]
+
 
         A2 = matrix(A2)
         b2 = matrix(b2)
@@ -259,9 +259,10 @@ class ComputeConstraint:
         A = matrix([A, A3])
         b = matrix([b, b3])
 
+
         i = 0
         while 1:
-            if b[i] == 1.1:
+            if b[i] == 0.001:
                 b = np.delete(b, i, axis=0)
                 A = np.delete(A, i, axis=0)
                 i = i - 1
