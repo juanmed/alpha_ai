@@ -10,13 +10,21 @@ from math import sin, cos, tan, asin, acos, atan2, sqrt
 from geometry_msgs.msg import PoseWithCovarianceStamped, Vector3
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, Range
+from tests.msg import UAV_input
 
 
 class KalmanFilter():
+    def input_cb(self, input):
+        self.u[0][0] = input.T
+        self.u[0][0] = input.M.x
+        self.u[0][0] = input.M.y
+        self.u[0][0] = input.M.z
+
+
     def vision_cb(self, pose):
-        self.z[0][0] = pose.pose.pose.position.z / self.scale
-        self.z[1][0] = -pose.pose.pose.position.x / self.scale
-        self.z[2][0] = -pose.pose.pose.position.y / self.scale + 1
+        self.z[0][0] = pose.pose.pose.position.z / self.scale + self.init_pose[0]
+        self.z[1][0] = -pose.pose.pose.position.x / self.scale + self.init_pose[1]
+        self.z[2][0] = -pose.pose.pose.position.y / self.scale + self.init_pose[2]
 
         x = pose.pose.pose.orientation.x
         y = pose.pose.pose.orientation.y
@@ -28,14 +36,15 @@ class KalmanFilter():
         self.z[3][0] = psi_c
         self.z[4][0] = -pi_c
         self.z[5][0] = -theta_c
+
         self.attitude_vo.x = psi_c
         self.attitude_vo.y = -pi_c
         self.attitude_vo.z = -theta_c
-        
+        '''
         for i in range(0, 6):
             for j in range(0, 6):
                 self.R[i][j] = max(pose.pose.covariance[i*6 + j], 0.0001)
-        
+        '''
         self.vision_tf = True
 
 
@@ -48,7 +57,7 @@ class KalmanFilter():
         ay_b = imu.linear_acceleration.y
         az_b = imu.linear_acceleration.z
 
-        theta_acc = asin(-ax_b/sqrt(ax_b**2+ay_b**2+az_b**2))
+        theta_acc = asin(-ax_b/self.g)
         pi_acc = atan2(ay_b, az_b)
 
         #self.z[10][0] = pi_acc
@@ -111,7 +120,6 @@ class KalmanFilter():
                            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
                            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                           #[0, 0, 1/(cos(pi)*cos(theta)), z*sin(pi)/((cos(pi)**2)*cos(theta)), z*sin(theta)/(cos(pi)*(cos(theta)**2)), 0, 0, 0, 0, 0, 0, 0],	# rangefinder
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],	# IMU
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
@@ -314,6 +322,7 @@ class KalmanFilter():
         self.vision_tf = False
         self.scale = 0.055 #*202/185
 
+        rospy.Subscriber('/uav_input', UAV_input, self.input_cb)
         rospy.Subscriber('/svo/pose_imu', PoseWithCovarianceStamped, self.vision_cb)
         rospy.Subscriber('/uav/sensors/imu', Imu, self.imu_cb)
         rospy.Subscriber('/uav/sensors/downward_laser_rangefinder', Range, self.range_cb)
