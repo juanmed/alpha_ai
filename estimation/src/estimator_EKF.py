@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-import cv2
 import numpy as np
 from numpy.linalg import inv, multi_dot
 from scipy.signal import cont2discrete
@@ -16,8 +15,8 @@ from tests.msg import UAV_input
 class KalmanFilter():
     def input_cb(self, input):
         self.u[0][0] = input.T
-        self.u[1][0] = input.M.x
-        self.u[2][0] = input.M.y
+        self.u[1][0] = input.M.y
+        self.u[2][0] = input.M.x
         self.u[3][0] = input.M.z
 
 
@@ -141,7 +140,7 @@ class KalmanFilter():
 
         ax = (sin(pi)*sin(psi)+cos(pi)*sin(theta)*cos(psi))*U[0][0]/self.mass - self.drag*vx
         ay = (-sin(pi)*cos(psi)+cos(pi)*sin(theta)*sin(psi))*U[0][0]/self.mass - self.drag*vy
-        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz #- self.g
+        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz - self.g
         p_dot = (self.arm_length/sqrt(2)*U[1][0] + (self.Iyy-self.Izz)*q*r)/self.Ixx
         q_dot = (self.arm_length/sqrt(2)*U[2][0] + (self.Izz-self.Ixx)*r*p)/self.Iyy
         r_dot = (self.k_torque/self.k_thrust*U[3][0] + (self.Ixx-self.Iyy)*p*q)/self.Izz
@@ -156,6 +155,9 @@ class KalmanFilter():
                        [pi+pi_dot*self.dT+pi_dotdot*(self.dT**2)/2], [theta+theta_dot*self.dT+theta_dotdot*(self.dT**2)/2], [psi+psi_dot*self.dT+psi_dotdot*(self.dT**2)/2],
                        [vx+ax*self.dT], [vy+ay*self.dT], [vz+az*self.dT],
                        [p+p_dot*self.dT], [q+q_dot*self.dT], [r+r_dot*self.dT]])
+        
+        print ax, ay, az
+
         return fx
 
 
@@ -378,8 +380,6 @@ class KalmanFilter():
 
 
 if __name__ == "__main__":
-    print("OpenCV: " + cv2.__version__)
-
     kalman_filter = KalmanFilter()
     while not rospy.is_shutdown():
         kalman_filter.loop()
