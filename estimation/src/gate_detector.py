@@ -10,9 +10,9 @@ from flightgoggles.msg import IRMarker, IRMarkerArray
 
 class GateDetector():
     def ir_cb(self, ir_array):
-        points = np.array(ir_array)
-        num = len(points)
-        while i in range(0, num):
+        num = len(ir_array.markers)
+        for i in range(0, num):
+            print ir_array.markers[i]
 
 
 
