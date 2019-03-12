@@ -40,9 +40,9 @@ class KalmanFilter():
 
 
     def imu_cb(self, imu):
-        self.z[7][0] = imu.angular_velocity.x   #p
-        self.z[8][0] = imu.angular_velocity.y   #q
-        self.z[9][0] = imu.angular_velocity.z   #r
+        self.z[7][0] = imu.angular_velocity.x   # p
+        self.z[8][0] = imu.angular_velocity.y   # q
+        self.z[9][0] = imu.angular_velocity.z   # r
 
         ax_b = imu.linear_acceleration.x
         ay_b = imu.linear_acceleration.y
@@ -104,15 +104,15 @@ class KalmanFilter():
         pi = self.x_est[3][0]
         theta = self.x_est[4][0]
 
-        self.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],	#visual_odometry
+        self.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],	# visualo dometry
                            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
                            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                           #[0, 0, 1/(cos(pi)*cos(theta)), z*sin(pi)/((cos(pi)**2)*cos(theta)), z*sin(theta)/(cos(pi)*(cos(theta)**2)), 0, 0, 0, 0, 0, 0, 0],	#rangefinder
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],	#IMU
+                           #[0, 0, 1/(cos(pi)*cos(theta)), z*sin(pi)/((cos(pi)**2)*cos(theta)), z*sin(theta)/(cos(pi)*(cos(theta)**2)), 0, 0, 0, 0, 0, 0, 0],	# rangefinder
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],	# IMU
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
 
@@ -133,7 +133,7 @@ class KalmanFilter():
 
         ax = (sin(pi)*sin(psi)+cos(pi)*sin(theta)*cos(psi))*U[0][0]/self.mass - self.drag*vx
         ay = (-sin(pi)*cos(psi)+cos(pi)*sin(theta)*sin(psi))*U[0][0]/self.mass - self.drag*vy
-        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz# - self.g
+        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz #- self.g
         p_dot = (self.arm_length/sqrt(2)*U[1][0] + (self.Iyy-self.Izz)*q*r)/self.Ixx
         q_dot = (self.arm_length/sqrt(2)*U[2][0] + (self.Izz-self.Ixx)*r*p)/self.Iyy
         r_dot = (self.k_torque/self.k_thrust*U[3][0] + (self.Ixx-self.Iyy)*p*q)/self.Izz
@@ -163,7 +163,7 @@ class KalmanFilter():
         r = X[11][0]
 
         hx = np.array([[x], [y], [z], [pi], [theta], [psi],
-                       [z],#/(cos(pi)*cos(theta))],
+                       [z],
                        [p], [q], [r]])
         return hx
 
@@ -233,8 +233,6 @@ class KalmanFilter():
 
 
     def __init__(self):
-        print("OpenCV: " + cv2.__version__)
-
         rospy.init_node('estimator')
 
         self.mass = rospy.get_param('/uav/flightgoggles_uav_dynamics/vehicle_mass')
@@ -256,14 +254,14 @@ class KalmanFilter():
         self.r = rospy.Rate(self.rate)
         self.dT = 1.0/self.rate
 
-        self.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],	#visual_odometry
+        self.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],	# visual odometry
                            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],	#rangefinder
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],	#IMU
+                           [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],	# rangefinder
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],	# IMU
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
         self.D = np.zeros((10, 4))
@@ -282,14 +280,14 @@ class KalmanFilter():
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
         
-        self.R = np.array([[0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0],           #visual_odometry
+        self.R = np.array([[0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0],       # visual odometry
                            [0, 0.000001, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0.000001, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0.000001, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0.000001, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 0.000001, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0, self.range_var, 0, 0, 0],	#rangefinder
-                           [0, 0, 0, 0, 0, 0, 0, self.gyro_var, 0, 0],    #IMU
+                           [0, 0, 0, 0, 0, 0, self.range_var, 0, 0, 0], # rangefinder
+                           [0, 0, 0, 0, 0, 0, 0, self.gyro_var, 0, 0],  # IMU
                            [0, 0, 0, 0, 0, 0, 0, 0, self.gyro_var, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, self.gyro_var]])
 
@@ -319,11 +317,11 @@ class KalmanFilter():
         rospy.Subscriber('/svo/pose_imu', PoseWithCovarianceStamped, self.vision_cb)
         rospy.Subscriber('/uav/sensors/imu', Imu, self.imu_cb)
         rospy.Subscriber('/uav/sensors/downward_laser_rangefinder', Range, self.range_cb)
-        self.pub_state = rospy.Publisher('/uav/state', Odometry, queue_size=1)
-        self.pub_position = rospy.Publisher('/uav/position', Vector3, queue_size=1)
-        self.pub_attitude = rospy.Publisher('/uav/attitude', Vector3, queue_size=1)
-        self.pub_linear_velocity = rospy.Publisher('/uav/linear_velocity', Vector3, queue_size=1)
-        self.pub_angular_velocity = rospy.Publisher('/uav/angular_velocity', Vector3, queue_size=1)
+        self.pub_state = rospy.Publisher('/uav/state', Odometry, queue_size=10)
+        self.pub_position = rospy.Publisher('/uav/position', Vector3, queue_size=10)
+        self.pub_attitude = rospy.Publisher('/uav/attitude', Vector3, queue_size=10)
+        self.pub_linear_velocity = rospy.Publisher('/uav/linear_velocity', Vector3, queue_size=10)
+        self.pub_angular_velocity = rospy.Publisher('/uav/angular_velocity', Vector3, queue_size=10)
 
         self.state = Odometry()
         self.position = Vector3()
@@ -331,7 +329,7 @@ class KalmanFilter():
         self.linear_velocity = Vector3()
         self.angular_velocity = Vector3()
 
-        self.pub_attitude_vo = rospy.Publisher('/uav/attitude_vo', Vector3, queue_size=1)
+        self.pub_attitude_vo = rospy.Publisher('/uav/attitude_vo', Vector3, queue_size=10)
         self.attitude_vo = Vector3()
 
 
@@ -371,6 +369,8 @@ class KalmanFilter():
 
 
 if __name__ == "__main__":
+    print("OpenCV: " + cv2.__version__)
+
     kalman_filter = KalmanFilter()
     while not rospy.is_shutdown():
         kalman_filter.loop()
