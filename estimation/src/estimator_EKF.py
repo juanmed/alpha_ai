@@ -380,8 +380,6 @@ class KalmanFilter():
 
 
 if __name__ == "__main__":
-    print("OpenCV: " + cv2.__version__)
-
     kalman_filter = KalmanFilter()
     while not rospy.is_shutdown():
         kalman_filter.loop()
