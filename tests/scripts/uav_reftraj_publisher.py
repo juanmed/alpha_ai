@@ -30,21 +30,21 @@ class Trajectory_Generator():
         self.level = True
 
         # init parameters
-        self.order = 6
+        self.order = 10
         self.n = 4
 
         if self.level is True:
             self.gate_name = parameter.gate_name
             self.gate_count = len(self.gate_name)
             self.init_pose = parameter.init_pose
-            # time_interval = 10
-            # self.t = np.linspace(0, time_interval * self.gate_count, self.gate_count + 1)
+            time_interval = 5
+            self.t = np.linspace(0, time_interval * self.gate_count, self.gate_count + 1)
         else:
             self.gate_count = 11
             self.init_pose = np.array([0.0, 0.0, 1.0, 0.0])
             # this is for trajectory with full gate ( maybe final test3 )
             # set time interval depending on distance between gate
-            # self.t = 2 * np.array([0, 1, 2, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7.5, 8.5])
+            self.t = 2 * np.array([0, 1, 2, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7.5, 8.5])
 
         self.passed_gate = 0
 
@@ -65,7 +65,7 @@ class Trajectory_Generator():
             is_quaternion = False
             self.keyframe = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
 
-        self.total_time = 10
+        self.total_time = 20
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count, self.total_time)
 
         # compute flat output trajectory
@@ -377,7 +377,7 @@ def pub_traj():
             # publish message
             traj_publisher.publish(traj)
             input_publisher.publish(input)
-            #rospy.loginfo(traj)
+            rospy.loginfo(traj)
             rate.sleep()
 
 
