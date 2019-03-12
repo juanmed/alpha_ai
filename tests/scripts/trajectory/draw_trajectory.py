@@ -24,18 +24,25 @@ def draw_trajectory(solution, order, gate, n, t, keyframe):
             solution[i * n * (order + 1) + 3 * (order + 1): i * n * (order + 1) + (order + 1) + 3 * (order + 1)],
             np.linspace(t[i], t[i + 1], 50)))
 
-    #print x_trajec
-    #print psi_trajec
-
+    # plot x y z
     fig = plt.figure(1)
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(211, projection='3d')
+    ax.set_title('xyz')
     ax.plot(x_trajec, y_trajec, z_trajec, 'r')
     ax.set_xlim(-60, 60)
     ax.set_ylim(-60, 60)
     ax.set_zlim(-60, 60)
-    ax.set_xlabel('x label')
-    ax.set_ylabel('y label')
-    ax.set_zlabel('z label')
+    ax.set_xlabel('x axis')
+    ax.set_ylabel('y axis')
+    ax.set_zlabel('z axis')
     keyframe = np.transpose(keyframe)
     for i in range(0, len(keyframe)):
         ax.text(keyframe[i][0], keyframe[i][1], keyframe[i][2], i, color='red')
+
+    # plot Yaw
+    ax2 = fig.add_subplot(212)
+    ax2.set_title('psi')
+    ax2.set_ylim(-1.8, 1.8)
+    ax2.plot(psi_trajec, 'b')
+
+    plt.show()
