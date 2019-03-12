@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import cv2
 import numpy as np
 from numpy.linalg import inv, multi_dot
 from scipy.signal import cont2discrete
@@ -30,11 +31,11 @@ class KalmanFilter():
         self.attitude_vo.x = psi_c
         self.attitude_vo.y = -pi_c
         self.attitude_vo.z = -theta_c
-        '''
+        
         for i in range(0, 6):
             for j in range(0, 6):
                 self.R[i][j] = max(pose.pose.covariance[i*6 + j], 0.0001)
-        '''
+        
         self.vision_tf = True
 
 
@@ -46,9 +47,9 @@ class KalmanFilter():
         ax_b = imu.linear_acceleration.x
         ay_b = imu.linear_acceleration.y
         az_b = imu.linear_acceleration.z
-        #pi_acc = asin(-ay_b/self.g)
-        #theta_acc = asin(ax_b/self.g)
-        #print pi_acc, theta_acc
+
+        theta_acc = asin(-ax_b/sqrt(ax_b**2+ay_b**2+az_b**2))
+        pi_acc = atan2(ay_b, az_b)
 
         #self.z[10][0] = pi_acc
         #self.z[11][0] = theta_acc
@@ -57,7 +58,8 @@ class KalmanFilter():
     def range_cb(self, rangefinder):
         pi = self.x_est[3][0]
         theta = self.x_est[4][0]
-        self.z[6][0] = abs((-rangefinder.range) * cos(pi)*cos(theta))
+        self.z[6][0] = (-rangefinder.range) * abs(cos(pi)*cos(theta))
+        self.R[6][6] = self.range_var * abs(cos(pi)*cos(theta))
 
 
     def getFB(self):
@@ -231,6 +233,8 @@ class KalmanFilter():
 
 
     def __init__(self):
+        print("OpenCV: " + cv2.__version__)
+
         rospy.init_node('estimator')
 
         self.mass = rospy.get_param('/uav/flightgoggles_uav_dynamics/vehicle_mass')
