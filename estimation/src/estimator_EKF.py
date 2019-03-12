@@ -16,9 +16,9 @@ from tests.msg import UAV_input
 class KalmanFilter():
     def input_cb(self, input):
         self.u[0][0] = input.T
-        self.u[0][0] = input.M.x
-        self.u[0][0] = input.M.y
-        self.u[0][0] = input.M.z
+        self.u[1][0] = input.M.x
+        self.u[2][0] = input.M.y
+        self.u[3][0] = input.M.z
 
 
     def vision_cb(self, pose):
