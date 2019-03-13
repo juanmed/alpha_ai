@@ -36,7 +36,7 @@ class GateLocation:
                                     self.gate_19, self.gate_20, self.gate_21, self.gate_22, self.gate_23])
 
         # racing 10 -> 21 -> 2 -> 13 -> 9 -> 14 -> 1 -> 22 -> 15 -> 23 -> 6
-        self.gate_racing = np.array([self.gate_10, self.gate_21, self.gate_2, self.gate_13, self.gate_9, self.gate_14,
+        self.gate_full_location = np.array([self.gate_10, self.gate_21, self.gate_2, self.gate_13, self.gate_9, self.gate_14,
                                      self.gate_1, self.gate_22, self.gate_15, self.gate_23, self.gate_6])
 
         self.gate_dic = dict(Gate1=self.gate_1, Gate2=self.gate_2, Gate3=self.gate_3, Gate4=self.gate_4,
@@ -46,21 +46,12 @@ class GateLocation:
                              Gate17=self.gate_17, Gate18=self.gate_18, Gate19=self.gate_19, Gate20=self.gate_20,
                              Gate21=self.gate_21, Gate22=self.gate_22, Gate23=self.gate_23)
 
-    def full_gate(self, gate_count):
-        return self.gate_racing[0:gate_count+1, :, :]
-
-    def level_gate(self):
-        gate = rospy.get_param("/uav/gate_names")
-        gate_count = len(gate)
-        gate_racing = []
-        for i in range(0, gate_count):
-            gate_racing = np.append(gate_racing, self.gate_dic[gate[i]])
-        gate_racing = np.reshape(gate_racing, (gate_count, 4, 3))
-        return gate_racing
-
-
-if __name__ == "__main__":
-
-    gate_location_cls = GateLocation()
-    #print gate_location_cls.get_gate_racing(1)
-    gate_location_cls.level_gate()
+    def get_gate_location(self, is_level, gate_count, gate_name=None):
+        if is_level is True:
+            gate_location = []
+            for i in range(0, gate_count):
+                gate_location = np.append(gate_location, self.gate_dic[gate_name[i]])
+            gate_location = np.reshape(gate_location, (gate_count, 4, 3))
+            return gate_location
+        else:
+            return self.gate_full_location[0:gate_count, :, :]

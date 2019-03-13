@@ -6,6 +6,7 @@
 
 import rospy
 from tests.msg import UAV_traj
+from tests.msg import UAV_input
 import tf
 import numpy as np
 
@@ -16,30 +17,62 @@ import trajectory.qp_solution as qp_solution
 import trajectory.keyframe_generation as keyframe_generation
 import trajectory.draw_trajectory as draw_trajectory
 import trajectory.trajgen2_helper as trajGen3D
+import trajectory.get_gate_location as get_gate_location
+import trajectory.optimal_time as optimal_time
 import matplotlib.pyplot as plt
 
 
 class Trajectory_Generator():
 
     def __init__(self):
-        
+
+        # choose one : level course or full course?
+        self.level = True
+
         # init parameters
-        self.order = parameter.order
-        self.n = parameter.n
-        self.gate = parameter.gate
-        self.t = parameter.t
+        self.order = 10
+        self.n = 4
 
-        # generate keyframe
+        if self.level is True:
+            self.gate_name = parameter.gate_name
+            self.gate_count = len(self.gate_name)
+            self.init_pose = parameter.init_pose
+            time_interval = 5
+            self.t = np.linspace(0, time_interval * self.gate_count, self.gate_count + 1)
+        else:
+            self.gate_count = 11
+            self.init_pose = np.array([0.0, 0.0, 1.0, 0.0])
+            # this is for trajectory with full gate ( maybe final test3 )
+            # set time interval depending on distance between gate
+            self.t = 2 * np.array([0, 1, 2, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7.5, 8.5])
+
+        self.passed_gate = 0
+
+        self.gate_location_cls = get_gate_location.GateLocation()
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
-        self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
 
-        # self.gate = 5
-        # self.t = np.array([0, 1, 2, 3, 4, 5, 6])
-        # self.keyframe = self.keyframe_cls.keyframe_generation(5)
+        if self.level is True:
+            # get gate location
+            self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count, self.gate_name)
+            # generate keyframe
+            is_quaternion = True
+            self.keyframe = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
+
+        else:
+            # get gate location
+            self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count)
+            # generate keyframe
+            is_quaternion = False
+            self.keyframe = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
+
+        self.total_time = 20
+        self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count, self.total_time)
 
         # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
-        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count, self.t, self.keyframe)
+
+        # draw trajectory in plot
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate_count, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -61,33 +94,51 @@ class Trajectory_Generator():
             self.i = self.i + 1   # trajectory to next gate
             self.last_time = time
 
-        if (self.i == self.gate):
+        if self.i == self.gate_count:
             print ("Total time: {}".format(time-self.init_time))
-            plt.show()
             exit()
 
-        return ref_trajectory 
+        return ref_trajectory
+
+    def pass_gate(self):
+        self.passed_gate = self.passed_gate + 1
+
+    def trajectory_update(self, current_pose, pass_time):
+
+        # delete previous pose and gate location which was passed before.
+        for i in range(0, self.passed_gate + 1):
+            self.keyframe = np.delete(self.keyframe, 0, axis=0)
+
+        # add current pose at keyframe
+        current_pose = np.array([current_pose])
+        self.keyframe = np.append(current_pose, self.keyframe)
+
+        # update time
+        self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count - self.passed_gate, self.total_time - pass_time)
+
+        # compute flat output trajectory
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count - self.passed_gate, self.t, self.keyframe)
+
 
 class Trajectory_Generator_Test():
 
     def __init__(self):
-
         # init parameters
         self.order = 6
         self.n = 4
-        self.gate = 1
+        self.gate_count = 1
         self.t = [0, 5]
 
         # generate keyframe
-        self.keyframe_cls = keyframe_generation.KeyframeGeneration()
-        self.keyframe = self.keyframe_cls.keyframe_generation(self.gate)
         self.keyframe = np.array([[0.3, 52.0, 2.5, -1*np.pi/2.0],
                                   [0.3, 52.0, 10, -1*np.pi/2.0]])
         self.keyframe = np.transpose(self.keyframe)
 
         # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate, self.t, self.keyframe)
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate, self.n, self.t, self.keyframe)
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count, self.t, self.keyframe)
+
+        # draw trajectory in plot
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate_count, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -110,9 +161,8 @@ class Trajectory_Generator_Test():
             self.i = self.i + 1  # trajectory to next gate
             self.last_time = time
 
-        if (self.i == self.gate):
+        if self.i == self.gate_count:
             print ("Total time: {}".format(time - self.init_time))
-            plt.show()
             exit()
 
         return ref_trajectory
@@ -206,14 +256,15 @@ class Trajectory_Generator2():
         return waypoints  
 
 
-
 def pub_traj():
 
     # create topic for publishing ref trajectory
     traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size = 10)
+    input_publisher = rospy.Publisher('uav_input', UAV_input, queue_size = 10)
 
     # init node
-    rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
+    # rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
+    rospy.init_node('uav_ref_trajectory_input_publisher', anonymous=True)
 
     # IMPORTANT WAIT TIME! 
     # If this is not here, the "start_time" in the trajectory generator is 
@@ -222,8 +273,8 @@ def pub_traj():
     rospy.sleep(0.1)
  
     # create a trajectory generator
-    #traj_gen = Trajectory_Generator()
-    traj_gen = Trajectory_Generator2()
+    traj_gen = Trajectory_Generator()
+    #traj_gen = Trajectory_Generator2()
     #traj_gen = Trajectory_Generator_Test()
 
     # publish at 10Hz
@@ -247,6 +298,10 @@ def pub_traj():
             traj.header.stamp = rospy.Time.now()
             traj.header.frame_id = ""
 
+            input = UAV_input()
+            input.header.stamp = rospy.Time.now()
+            input.header.frame_id = ""
+
             
             # get all values... we need to do this becuase ref_traj contains old, ugly np.matrix
             # objects >:(
@@ -257,6 +312,11 @@ def pub_traj():
             uax, uay, uaz = np.array(ref_traj[4]).flatten()
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
+
+            # Input (T, M) publisher to be used in estimation
+            u_1 = np.array(ref_traj[7]).flatten()
+            u_xx, u_xy, u_xz = np.array(ref_traj[8]).flatten()
+
 
             traj.pose.position.x = x
             traj.pose.position.y = y
@@ -295,6 +355,11 @@ def pub_traj():
             traj.uc.y = ucy
             traj.uc.z = ucz
 
+            #input.T = u_1
+            #input.M.x = u_xx
+            #input.M.y = u_xy
+            #input.M.z = u_xz
+
             """
             x_line = np.append(x_line, x)
             y_line = np.append(y_line, y)
@@ -313,7 +378,9 @@ def pub_traj():
             """
             # publish message
             traj_publisher.publish(traj)
-            #rospy.loginfo(traj)
+
+            #input_publisher.publish(input)
+            rospy.loginfo(traj)
             rate.sleep()
 
 

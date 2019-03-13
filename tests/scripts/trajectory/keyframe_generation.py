@@ -1,41 +1,27 @@
-#!/usr/bin/env python
-import rospy
-
 import numpy as np
-import get_gate_param
 import tf
-import parameter
 
 
-# without returning : final keyframe != initial keyframe
 class KeyframeGeneration:
 
     def __init__(self):
-        self.gate_location_cls = get_gate_param.GateLocation()
-        self.level = parameter.level
+        pass
 
-    def keyframe_generation(self, gate=11):
-        # get gate location according to level
-        if self.level is True:
-            init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
-            # init_pose = [ x y z x y z w ]   3 position 4 quaternion
-            init_pose_orientation = tf.transformations.euler_from_quaternion([init_pose[3], init_pose[4], init_pose[5], init_pose[6]], axes='sxyz')
-            init_pose = np.array([init_pose[0], init_pose[1], init_pose[2], init_pose_orientation[2]])
-            gate_racing = self.gate_location_cls.level_gate()
-        # when full gate
-        else:
-            init_pose = np.array([0.0, 0.0, 1.0, 0.0])
-            gate_racing = self.gate_location_cls.full_gate(11)
+    def keyframe_generation(self, current_pose, is_quaternion, gate_location, gate_count):
+        if is_quaternion is True:
+            # init_pose = [ x y z x y z w ]   3 position 4 quaternion  -> 3 position and 1 yaw
+            init_pose_orientation = tf.transformations.euler_from_quaternion([current_pose[3], current_pose[4], current_pose[5], current_pose[6]], axes='sxyz')
+            init_pose = np.array([current_pose[0], current_pose[1], current_pose[2], init_pose_orientation[2]])
+            current_pose = init_pose
 
         # keyframe with initial position : keyframe = gate + 1
-        m = gate + 1
+        m = gate_count + 1
 
         # generate keyframe
         keyframe = []
-        keyframe = np.append(keyframe, init_pose)
-        for i in range(0, gate):
-            keyframe = np.append(keyframe, self.compute_pose(gate_racing[i]))
-
+        keyframe = np.append(keyframe, current_pose)
+        for i in range(0, gate_count):
+            keyframe = np.append(keyframe, self.compute_pose(gate_location[i]))
         keyframe = np.reshape(keyframe, (m, 4))
         keyframe = np.transpose(keyframe)
 
@@ -52,7 +38,7 @@ class KeyframeGeneration:
 
         # normal_vector = -1 * x_vector / y_vector    we should check this...
         gate_psi = np.arctan2(-x_vector, y_vector)
-
+        print gate_psi
         gate_pose = np.array([gate_x, gate_y, gate_z, gate_psi])
 
         return gate_pose
