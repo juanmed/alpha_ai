@@ -14,7 +14,7 @@ mass = rospy.get_param("/uav/flightgoggles_uav_dynamics/vehicle_mass")
 
 # this is for trajectory with level(easy / medium / hard)
 level_gate = len(rospy.get_param("/uav/gate_names"))    # gate count
-time_interval = 1
+time_interval = 10
 level_t = np.linspace(0, time_interval*level_gate, level_gate+1)
 
 

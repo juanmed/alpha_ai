@@ -37,21 +37,30 @@ def compute_trajectory(solution, order, time):
     vel_y = np.polyval(y_dot_coeff, time)
     vel_z = np.polyval(z_dot_coeff, time)
     vel_psi = np.polyval(psi_dot_coeff, time)
-    print vel_psi
+    #print vel_psi
 
     acc_x = np.polyval(x_ddot_coeff, time)
     acc_y = np.polyval(y_ddot_coeff, time)
     acc_z = np.polyval(z_ddot_coeff, time)
     acc_psi = np.polyval(psi_ddot_coeff, time)
-    print acc_psi
+    # acc_psi
 
     jerk_x = np.polyval(x_dddot_coeff, time)
     jerk_y = np.polyval(y_dddot_coeff, time)
     jerk_z = np.polyval(z_dddot_coeff, time)
+    #print jerk_x
+    #jerk_x, jerk_y, jerk_z = 0.0
+    jerk_x = 0.0
+    jerk_y = 0.0
+    jerk_z = 0.0
 
     snap_x = np.polyval(x_ddddot_coeff, time)
     snap_y = np.polyval(y_ddddot_coeff, time)
     snap_z = np.polyval(z_ddddot_coeff, time)
+    #print snap_x
+    snap_x = 0.0
+    snap_y = 0.0
+    snap_z = 0.0
 
     pos = np.array([pos_x, pos_y, pos_z])
     vel = np.array([vel_x, vel_y, vel_z])

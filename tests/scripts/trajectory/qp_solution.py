@@ -14,7 +14,7 @@ def qp_solution(order, n, gate, t, keyframe):
     compute_constraint_cls = compute_constraint.ComputeConstraint(order, gate, 3, 2, t, keyframe, None, None, None)
     A, b = compute_constraint_cls.compute_eq()
 
-    # np.savetxt("A.csv", A, delimiter=",")
+    #np.savetxt("A.csv", A, delimiter=",")
     # np.savetxt("b.csv", b, delimiter=",")
     # print np.size(A)
     # print np.size(b)
