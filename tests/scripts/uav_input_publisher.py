@@ -418,12 +418,12 @@ class uav_Input_Publisher():
 
 
 
-        # phi (x axis) angular position dynamics control law
-        uc_e_x = -1.0*self.Kr*phi + (self.N_ur + np.dot(self.Kr,self.N_xr))*phi_des
+        # phi (x axis) angular position dynamics control law 
+        uc_e_x = -1.0*self.Kr*phi + (self.N_ur + np.dot(self.Kr,self.N_xr))*phi_r
         # theta (y axis) angular position dynamics control law
-        uc_e_y = -1.0*self.Kr*theta + (self.N_ur + np.dot(self.Kr,self.N_xr))*theta_des
+        uc_e_y = -1.0*self.Kr*theta + (self.N_ur + np.dot(self.Kr,self.N_xr))*theta_r
         # psi (z axis) angular position dynamics control law
-        uc_e_z = -1.0*self.Kr*psi + (self.N_ur + np.dot(self.Kr,self.N_xr))*psi_des
+        uc_e_z = -1.0*self.Kr*psi + (self.N_ur + np.dot(self.Kr,self.N_xr))*psi_r
 
         #compose angular position dynamics input vector
         #uc_e = np.array([[uc_e_x[0]],[uc_e_y[0]],[uc_e_z[0]]])
@@ -453,9 +453,9 @@ class uav_Input_Publisher():
         rt_msg.header.stamp = rospy.Time.now()
         rt_msg.header.frame_id = 'uav/imu'
 
-        rt_msg.angular_rates.x = w_b[0] #traj_msg.twist.angular.x
-        rt_msg.angular_rates.y = w_b[1] #traj_msg.twist.angular.y
-        rt_msg.angular_rates.z = w_b[2] #traj_msg.twist.angular.z
+        rt_msg.angular_rates.x = 2*w_b[0] #- p_r #traj_msg.twist.angular.x
+        rt_msg.angular_rates.y = 2*w_b[1] #- q_r  #traj_msg.twist.angular.y
+        rt_msg.angular_rates.z = 2*w_b[2] #- r_r #traj_msg.twist.angular.z
 
         rt_msg.thrust.x = 0.0
         rt_msg.thrust.y = 0.0
