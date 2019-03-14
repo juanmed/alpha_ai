@@ -221,7 +221,7 @@ class KalmanFilter():
         self.r = rospy.Rate(self.rate)
         self.dT = 1.0/self.rate
 
-        self.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0],     # visualo dometry
+        self.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0],     # visual odometry
                            [0, 1, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 1, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 1, 0, 0, 0, 0, 0],
