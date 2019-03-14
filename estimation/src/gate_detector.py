@@ -27,6 +27,7 @@ class GateDetector():
                 object_points[i][0] = self.gate_location[gate_id-1][marker_id-1][0]
                 object_points[i][1] = self.gate_location[gate_id-1][marker_id-1][1]
                 object_points[i][2] = self.gate_location[gate_id-1][marker_id-1][2]
+
             rvec, tvec = self.getPose(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)))
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
@@ -52,6 +53,7 @@ class GateDetector():
         theta = sqrt(v[0]**2 + v[1]**2 + v[2]**2)
         r = np.array([v[0], v[1], v[2]]) / theta
         R = cos(theta)*np.eye(3) + sin(theta)*self.hat(r) + (1-cos(theta))*np.dot(r, r.T)
+        print R
         return R
 
 
@@ -59,12 +61,13 @@ class GateDetector():
         R = self.rodrigues2rotation(rvec)
         
         pi = asin(-R[0][2])
-        theta = atan2(R[1][2], R[2][2])
-        psi = atan2(R[0][1], R[0][0])
+        theta = atan2(R[1][2], R[2][2]) + np.pi/2
+        psi = atan2(R[0][1], R[0][0]) + np.pi/2
+        print pi, theta, psi
 
         self.state.position.x = tvec[0][0]
-        self.state.position.y = tvec[1][0]
-        self.state.position.z = tvec[2][0]
+        self.state.position.y = tvec[2][0]
+        self.state.position.z = tvec[1][0]
         self.state.orientation.x = sin(pi/2)*cos(theta/2)*cos(psi/2) - cos(pi/2)*sin(theta/2)*sin(psi/2)
         self.state.orientation.y = sin(pi/2)*cos(theta/2)*sin(psi/2) + cos(pi/2)*sin(theta/2)*cos(psi/2)
         self.state.orientation.z = cos(pi/2)*cos(theta/2)*sin(psi/2) - sin(pi/2)*sin(theta/2)*cos(psi/2)
