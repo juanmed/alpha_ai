@@ -60,18 +60,18 @@ class GateDetector():
         R = self.rodrigues2rotation(rvec).T
         t = np.dot(-R, tvec)
         
-        pi = asin(-R[0][2])
-        theta = atan2(R[1][2], R[2][2])
-        psi = atan2(R[0][1], R[0][0])
-        print pi, theta, psi
+        qw = sqrt(1 + R[0][0] + R[1][1] + R[2][2]) / 2
+        qx = (R[2][1] - R[1][2]) / (4*qw)
+        qy = (R[0][2] - R[2][0]) / (4*qw)
+        qz = (R[1][0] - R[0][1]) / (4*qw)
 
         self.state.position.x = t[0][0]
         self.state.position.y = t[1][0]
         self.state.position.z = t[2][0]
-        self.state.orientation.x = sin(pi/2)*cos(theta/2)*cos(psi/2) - cos(pi/2)*sin(theta/2)*sin(psi/2)
-        self.state.orientation.y = sin(pi/2)*cos(theta/2)*sin(psi/2) + cos(pi/2)*sin(theta/2)*cos(psi/2)
-        self.state.orientation.z = cos(pi/2)*cos(theta/2)*sin(psi/2) - sin(pi/2)*sin(theta/2)*cos(psi/2)
-        self.state.orientation.w = cos(pi/2)*cos(theta/2)*cos(psi/2) + sin(pi/2)*sin(theta/2)*sin(psi/2)
+        self.state.orientation.x = qx
+        self.state.orientation.y = qy
+        self.state.orientation.z = qz
+        self.state.orientation.w = qw
 
         print self.state
 
