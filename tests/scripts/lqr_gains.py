@@ -152,6 +152,20 @@ Cr = np.matrix([1.0])
 # transmission matrix for all systems
 D_ = np.matrix([0.0])
 
+# PID Gains for 2nd order system  with transfer function
+#    H(s) = 1 / s**2
+Kp2 = 3.0
+Ki2 = 0.0
+Kd2 = 3.0
+
+# PID Gains for 1st order system with transfer function
+#    H(s) = 1 / s
+Kp1 = 10
+Ki1 = 0.0
+Kd1 = 10
+
+
+
 # Helper code for visualizing the performance of the gains computed 
 # by both the LQR and pole placement control methods
 if __name__ == '__main__':
@@ -159,10 +173,10 @@ if __name__ == '__main__':
 	import matplotlib.pyplot as plt
 
 	fig = plt.figure(figsize=(20,10))
-	fig.suptitle(" LQR Controller for a dif-flat generated trajectory tracking quadrotor")
+	fig.suptitle(" LQR, PP and PID controller performance")
 	ax0 = fig.add_subplot(2,1,1)#, projection='3d')
 	ax1 = fig.add_subplot(2,1,2)
-	#ax2 = fig.add_subplot(3,2,3)#, projection='3d')
+	#ax2 = fig.add_subplot(3,1,3)#, projection='3d')
 	#ax3 = fig.add_subplot(3,2,4)
 	#ax4 = fig.add_subplot(3,2,5)
 	#ax5 = fig.add_subplot(3,2,6)
@@ -206,13 +220,42 @@ if __name__ == '__main__':
 	refw = Rw*np.ones_like(t)
 
 
-	# closed loop trans-dynamics system with LQR
+	# Define 2nd order system transfer function
+	num2 = np.array([1.0])
+	den2 = np.array([1.0,0.0,0.0])
+	plant2 = ctl.tf(num2, den2)
+
+	# Define PID controller for 2nd order system
+	num_pid_2 = np.array([Kd2, Kp2])  #np.array([Kd2, Kp2, Ki2])
+	den_pid_2 = np.array([1.0])   #np.array([1.0, 0.0])
+	pid2 = ctl.tf(num_pid_2, den_pid_2)
+
+	# Define 1st order system transfer function
+	num1 = np.array([1.0])
+	den1 = np.array([1.0,0.0])
+	plant1 = ctl.tf(num1,den1)
+
+	# Define PID Controller for 1st order system
+	num_pid_1 = np.array([Kd1, Kp1])    # np.array([Kd1, Kp1, Ki1])
+	den_pid_1 = np.array([1.0])    # np.array([1.0, 0.0])
+	pid1 = ctl.tf(num_pid_1, den_pid_1)
+
+	# closed loop dynamics system with LQR
 	x_cl_lqr = ctl.ss(At-Bt*Kt_lqr, Bt*(N_ut_lqr + Kt_lqr*N_xt_lqr)*1.0 , Ct, D_)
 	w_cl_lqr = ctl.ss(Ar-Br*Kr_lqr, Br*(N_ur_lqr + Kr_lqr*N_xr_lqr)*1.0 , Cr, D_) 
 
-	# closed loop trans-dynamics system with LQR
+	# closed loop dynamics system with PP
 	x_cl_pp = ctl.ss(At-Bt*Kt_pp, Bt*(N_ut_pp + Kt_pp*N_xt_pp)*1.0 , Ct, D_)
 	w_cl_pp = ctl.ss(Ar-Br*Kr_pp, Br*(N_ur_pp + Kr_pp*N_xr_pp)*1.0 , Cr, D_) 
+
+	# closed loop dynamics system with PID
+	# interconnect plant and pid with feedback block with H(s)= 1
+	fb = ctl.tf([1],[1])
+	dummy = ctl.series(pid2, plant2)
+	pid_controlled_sys2 = ctl.feedback(dummy, fb, sign = -1) 
+	fb2 = ctl.tf([1],[1])
+	dummy2 = ctl.series(pid1, plant1)
+	pid_controlled_sys1 = ctl.feedback(dummy2, fb2, sign = -1)
 
 	# define an input signal shape and draw response
 	tx, x_lqr, s = ctl.forced_response(x_cl_lqr, T=t, U=refx)
@@ -221,9 +264,14 @@ if __name__ == '__main__':
 	tx, x_pp, s = ctl.forced_response(x_cl_pp, T=t, U=refx)
 	tx, w_pp, s = ctl.forced_response(w_cl_pp, T=t, U=refw)
 
+	tx, x_pid, s = ctl.forced_response(pid_controlled_sys2, T=t, U=refx)
+	tx, w_pid, s = ctl.forced_response(pid_controlled_sys1, T=t, U=refw)
+
+	#tx, x_ol, s = ctl.forced_response(plant2, T=t, U=refx)
 
 	ax0.plot(t, x_lqr,linestyle = '-',color ='r', label = "x_lqr")
 	ax0.plot(t, x_pp,linestyle = '-',color ='g', label = "x_pp")
+	ax0.plot(t, x_pid, linestyle = '-',color ='b', label = "x_pid")
 	ax0.plot(t, refx,linestyle = '--', color = "k", label = 'x ref')
 	ax0.set_title("Step response for translation dynamics", fontsize='small')
 	ax0.legend(loc='center right', shadow=True, fontsize='small')
@@ -231,14 +279,24 @@ if __name__ == '__main__':
 	ax0.set_ylabel("x {m}")
 
 
-	ax1.plot(t, w_lqr,linestyle = '-',color ='r', label = "w_lqr")
-	ax1.plot(t, w_pp,linestyle = '-',color ='g', label = "w_pp")
+	ax1.plot(t, w_lqr, linestyle = '-',color ='r', label = "w_lqr")
+	ax1.plot(t, w_pp, linestyle = '-',color ='g', label = "w_pp")
+	ax1.plot(t, w_pid, linestyle = '-',color ='b', label = "w_pid")
 	ax1.plot(t, refw,linestyle = '--', color = "k", label = 'w ref')
 	ax1.set_title("Step response of rotational dynamics", fontsize='small')
 	ax1.legend(loc='center right', shadow=True, fontsize='small')
 	ax1.set_xlabel("time {s}")
 	ax1.set_ylabel("w {rad}")
 
+	"""
+	ax2.plot(t, x_ol,linestyle = '-',color ='r', label = "x_ol")
+	#ax1.plot(t, w_pp,linestyle = '-',color ='g', label = "w_pp")
+	ax2.plot(t, refx,linestyle = '--', color = "k", label = 'x ref')
+	ax2.set_title("Step response of open loop translation dynamics", fontsize='small')
+	ax2.legend(loc='center right', shadow=True, fontsize='small')
+	ax2.set_xlabel("time {s}")
+	ax2.set_ylabel("x {m}")
+	"""
 	plt.show()
 
 

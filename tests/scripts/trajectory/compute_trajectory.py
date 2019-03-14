@@ -38,10 +38,12 @@ def compute_trajectory(solution, order, time):
     vel_z = np.polyval(z_dot_coeff, time)
     vel_psi = np.polyval(psi_dot_coeff, time)
 
+
     acc_x = np.polyval(x_ddot_coeff, time)
     acc_y = np.polyval(y_ddot_coeff, time)
     acc_z = np.polyval(z_ddot_coeff, time)
     acc_psi = np.polyval(psi_ddot_coeff, time)
+
 
     jerk_x = np.polyval(x_dddot_coeff, time)
     jerk_y = np.polyval(y_dddot_coeff, time)

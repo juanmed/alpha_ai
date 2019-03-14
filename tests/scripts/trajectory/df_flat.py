@@ -285,6 +285,7 @@ def compute_ref(trajectory):
     # because that is the result from the differential flatness output selection
 
     #return [pos_traj.T, vel_traj.T, or_, w_, acc_traj.T, w_dot_, u_c, u_1, u_x]
+
     #return [pos_traj.T, vel_traj.T, or_, w_, u_a, u_b, u_c]
     return [pos_traj.T, vel_traj.T, or_, w_, u_a, u_b, u_c, u_1, u_x, R_]
 

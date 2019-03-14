@@ -235,9 +235,11 @@ class Trajectory_Generator2():
             waypoints[i+1][1] = gate_center[1]
             waypoints[i+1][2] = gate_center[2]
 
+        waypoints[waypoints.shape[0]-1][1] =  waypoints[waypoints.shape[0]-1][1] - 30
+
         return waypoints
 
-    def get_vertical_waypoints(self):
+    def get_vertical_waypoints(self, height):
 
         # First waypoint is initial position
         init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
@@ -249,7 +251,7 @@ class Trajectory_Generator2():
         # now add a waypoint exactly 1m above the drone 
         waypoints[1][0] = waypoints[0][0]
         waypoints[1][1] = waypoints[0][1]
-        waypoints[1][2] = waypoints[0][2] + 1
+        waypoints[1][2] = waypoints[0][2] + height
 
         return waypoints  
 
@@ -311,6 +313,7 @@ def pub_traj():
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
             Rbw = np.array(ref_traj[9]).flatten().tolist()
+            print("ref_traj[9]: {}".format(ref_traj[9]))
 
             # Input (T, M) publisher to be used in estimation
             u_1 = np.array(ref_traj[7]).flatten()
@@ -346,7 +349,7 @@ def pub_traj():
             traj.ua.y = uay
             traj.ua.z = uaz
 
-            traj.ub.x = ubx
+            traj.ub.x = np.linalg.norm(ref_traj[5])  # ubx
             traj.ub.y = uby
             traj.ub.z = ubz
 
@@ -356,10 +359,10 @@ def pub_traj():
 
             traj.rot = Rbw
 
-            input.T = u_1
-            input.M.x = u_xx
-            input.M.y = u_xy
-            input.M.z = u_xz
+            #input.T = u_1
+            #input.M.x = u_xx
+            #input.M.y = u_xy
+            #input.M.z = u_xz
 
             """
             x_line = np.append(x_line, x)
@@ -379,7 +382,8 @@ def pub_traj():
             """
             # publish message
             traj_publisher.publish(traj)
-            input_publisher.publish(input)
+
+            #input_publisher.publish(input)
             rospy.loginfo(traj)
             rate.sleep()
 
