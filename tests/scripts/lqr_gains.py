@@ -154,9 +154,9 @@ D_ = np.matrix([0.0])
 
 # PID Gains for 2nd order system  with transfer function
 #    H(s) = 1 / s**2
-Kp2 = 10
+Kp2 = 3.0
 Ki2 = 0.0
-Kd2 = 10
+Kd2 = 3.0
 
 # PID Gains for 1st order system with transfer function
 #    H(s) = 1 / s

@@ -313,6 +313,7 @@ def pub_traj():
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
             Rbw = np.array(ref_traj[9]).flatten().tolist()
+            print("ref_traj[9]: {}".format(ref_traj[9]))
 
             # Input (T, M) publisher to be used in estimation
             u_1 = np.array(ref_traj[7]).flatten()
