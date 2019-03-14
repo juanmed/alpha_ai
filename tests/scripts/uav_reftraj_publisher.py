@@ -72,7 +72,7 @@ class Trajectory_Generator():
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count, self.t, self.keyframe)
 
         # draw trajectory in plot
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate_count, self.n, self.t, self.keyframe)
+        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate_count, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -310,6 +310,7 @@ def pub_traj():
             uax, uay, uaz = np.array(ref_traj[4]).flatten()
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
+            Rbw = np.array(ref_traj[9]).flatten().tolist()
 
             # Input (T, M) publisher to be used in estimation
             u_1 = np.array(ref_traj[7]).flatten()
@@ -352,6 +353,8 @@ def pub_traj():
             traj.uc.x = ucx
             traj.uc.y = ucy
             traj.uc.z = ucz
+
+            traj.rot = Rbw
 
             input.T = u_1
             input.M.x = u_xx
