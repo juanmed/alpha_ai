@@ -24,7 +24,7 @@ def publish_auv_poseStamped():
     tf_subscriber.waitForTransform("/world", "uav/imu", rospy.Time(), rospy.Duration(4.0))
 
     # publish at 100hz
-    rate = rospy.Rate(100.0)
+    rate = rospy.Rate(200.0)
     
     while not rospy.is_shutdown():
 
