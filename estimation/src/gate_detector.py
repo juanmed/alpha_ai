@@ -53,21 +53,21 @@ class GateDetector():
         theta = sqrt(v[0]**2 + v[1]**2 + v[2]**2)
         r = np.array([v[0], v[1], v[2]]) / theta
         R = cos(theta)*np.eye(3) + sin(theta)*self.hat(r) + (1-cos(theta))*np.dot(r, r.T)
-        print R
         return R
 
 
     def setState(self, rvec, tvec):
-        R = self.rodrigues2rotation(rvec)
+        R = self.rodrigues2rotation(rvec).T
+        t = np.dot(-R, tvec)
         
         pi = asin(-R[0][2])
-        theta = atan2(R[1][2], R[2][2]) + np.pi/2
-        psi = atan2(R[0][1], R[0][0]) + np.pi/2
+        theta = atan2(R[1][2], R[2][2])
+        psi = atan2(R[0][1], R[0][0])
         print pi, theta, psi
 
-        self.state.position.x = tvec[0][0]
-        self.state.position.y = tvec[2][0]
-        self.state.position.z = tvec[1][0]
+        self.state.position.x = t[0][0]
+        self.state.position.y = t[1][0]
+        self.state.position.z = t[2][0]
         self.state.orientation.x = sin(pi/2)*cos(theta/2)*cos(psi/2) - cos(pi/2)*sin(theta/2)*sin(psi/2)
         self.state.orientation.y = sin(pi/2)*cos(theta/2)*sin(psi/2) + cos(pi/2)*sin(theta/2)*cos(psi/2)
         self.state.orientation.z = cos(pi/2)*cos(theta/2)*sin(psi/2) - sin(pi/2)*sin(theta/2)*cos(psi/2)
