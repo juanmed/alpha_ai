@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+import rospy
+
 import numpy as np
 import tf
 
@@ -14,31 +17,34 @@ class KeyframeGeneration:
             init_pose = np.array([current_pose[0], current_pose[1], current_pose[2], init_pose_orientation[2]])
             current_pose = init_pose
 
-        # keyframe with initial position : keyframe = gate + 1
-        m = gate_count + 1
-
         # generate keyframe
-        keyframe = []
-        keyframe = np.append(keyframe, current_pose)
+        keyframe = np.array(current_pose)
+        print keyframe
         for i in range(0, gate_count):
-            keyframe = np.append(keyframe, self.compute_pose(gate_location[i]))
-        keyframe = np.reshape(keyframe, (m, 4))
+            #print self.compute_pose(gate_location[i])
+            keyframe = np.vstack((keyframe, self.compute_pose(gate_location[i])))
+            # compensate gate direction
+            if self.compensate_direction(keyframe[i+1], keyframe[i]):
+                print "%d gate" %(i+1)
+                if keyframe[i+1][3] <= 0:
+                    keyframe[i+1][3] = keyframe[i+1][3] + 3.14
+                    print keyframe[i+1][3]
+                else:
+                    keyframe[i+1][3] = keyframe[i+1][3] - 3.14
+                    print keyframe[i + 1][3]
+
+        waypoint = np.size(keyframe)/4
+        keyframe = np.reshape(keyframe, (waypoint, 4))
         keyframe = np.transpose(keyframe)
 
-        return keyframe
+        # include initial position
+        return keyframe, waypoint
 
     def compute_pose(self, gate_location):
         gate = np.array(gate_location)
         gate_x = np.sum(gate[:, 0]) / 4.0
         gate_y = np.sum(gate[:, 1]) / 4.0
         gate_z = np.sum(gate[:, 2]) / 4.0
-
-        x_vector = gate[1, 0] - gate[0, 0]
-        y_vector = gate[1, 1] - gate[0, 1]
-
-        # normal_vector = -1 * x_vector / y_vector    we should check this...
-        gate_psi = np.arctan2(-x_vector, y_vector)
-        print "my method: %s" % gate_psi
 
         # cross product
         p1 = gate[0, :]
@@ -48,8 +54,33 @@ class KeyframeGeneration:
         v1 = p3-p1
         v2 = p2-p1
         cp = np.cross(v1, v2)
-        print "cross product: %s" % np.arctan2(cp[1], cp[0])
 
+        print "cross product: %s" % np.arctan2(cp[1], cp[0])
+        gate_psi = np.arctan2(cp[1], cp[0])
         gate_pose = np.array([gate_x, gate_y, gate_z, gate_psi])
 
+        #gate_pose = self.add_waypoint(gate_pose, cp)
+
         return gate_pose
+
+    # add before and after waypoint at certain gate
+    def add_waypoint(self, gate_pose, cp):
+        relaxation = 0.5
+        before_waypoint = np.array([gate_pose[0]-cp[0]*relaxation, gate_pose[1]-cp[1]*relaxation, gate_pose[2]-cp[2]*relaxation, gate_pose[3]])
+        after_waypoint = np.array([gate_pose[0]+cp[0]*relaxation, gate_pose[1]+cp[1]*relaxation, gate_pose[2]+cp[2]*relaxation, gate_pose[3]])
+        gate_pose = np.append(before_waypoint, gate_pose)
+        gate_pose = np.append(gate_pose, after_waypoint)
+
+        return gate_pose
+
+    def compensate_direction(self, keyframe1, keyframe2):
+        x_vector = keyframe1[0] - keyframe2[0]
+        y_vector = keyframe1[1] - keyframe2[1]
+        z_vector = keyframe1[2] - keyframe2[2]
+        vector = np.array([x_vector, y_vector, z_vector])
+        gate_direction = ([np.cos(keyframe1[3]), np.sin(keyframe1[3]), 0])
+        dotproduct = np.dot(vector, gate_direction)
+        cosangle = dotproduct/(np.linalg.norm(vector)*np.linalg.norm(gate_direction))
+        if cosangle < 0 :
+            return True
+        return False

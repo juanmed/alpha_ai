@@ -60,27 +60,26 @@ class Trajectory_Generator():
             self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count, self.gate_name)
             # generate keyframe
             is_quaternion = True
-            self.keyframe = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
+            self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
 
         else:
             # get gate location
             self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count)
             # generate keyframe
             is_quaternion = False
-            self.keyframe = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
+            self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
 
         self.gates = []
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
 
         self.total_time = 20
-        self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count, self.total_time)
+        self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
 
         # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count, self.t, self.keyframe)
-
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe)
         # draw trajectory in plot
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate_count, self.n, self.t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
