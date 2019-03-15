@@ -278,7 +278,7 @@ def pub_traj():
     #traj_gen = Trajectory_Generator_Test()
 
     # publish at 10Hz
-    rate = rospy.Rate(100.0)
+    rate = rospy.Rate(200.0)
 
     x_line = []
     y_line = []

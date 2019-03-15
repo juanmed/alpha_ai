@@ -30,7 +30,7 @@ class uav_Input_Publisher():
         self.reftraj_sub = message_filters.Subscriber('/uav_ref_trajectory', UAV_traj)
 
         # filter messages based on time
-        ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.01)
+        ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.005)
         ts.registerCallback(self.pid_controller)
 
         self.m = rospy.get_param("/uav/flightgoggles_uav_dynamics/vehicle_mass")
@@ -67,12 +67,16 @@ class uav_Input_Publisher():
         self.max_thrust = self.rotor_count*self.thrust_coeff*(self.max_rotor_speed**2)  # assuming cuadratic model for rotor thrust 
 
 
-        # send one message with Thrust > 10 for uav/sensors/imu to start
-        #rt_msg = RateThrust()
-        #rt_msg.thrust.z = 10
-        #self.input_publisher.publish(rt_msg)
-
+        # store position error for PID controller
         self.pos_err = np.zeros((3,1))
+        
+        # initialize variables to make position controller
+        # slower than Orientation controller
+        self.T = g
+        self.Rbw_des = np.diag([1.0,1.0,1.0])
+        self.loops = 0
+        self.w_b_des = np.zeros((3,1))
+        self.pos_loop_freq = 30
 
 
     def callback(self, state_msg, traj_msg):
@@ -385,89 +389,106 @@ class uav_Input_Publisher():
         Rwb = tf.transformations.quaternion_matrix(ori_quat)
         p, q, r = [state_msg.twist.angular.x, state_msg.twist.angular.y, state_msg.twist.angular.z]
 
-        # compute desired input ua = ua_ref + ua_e
-        # ue_ref : from dif flatness
-        # ua_e = -Kp*(p - p_ref) - Kd * (v - v_ref)    using PID controller
-        pos = np.array([[x],[y],[z]])
-        pos_ref = np.array([[x_r],[y_r],[z_r]])
-        v = np.array([[vx],[vy],[vz]])
-        v_ref = np.array([[vx_r],[vy_r],[vz_r]])
+        # ******************************************#
+        #            POSITION CONTROL LOOP
+        # ******************************************#
+        if(self.loops == 0): #self.loops == 0
+            # compute desired input ua = ua_ref + ua_e
+            # ue_ref : from dif flatness
+            # ua_e = -Kp*(p - p_ref) - Kd * (v - v_ref)    using PID controller
+            pos = np.array([[x],[y],[z]])
+            pos_ref = np.array([[x_r],[y_r],[z_r]])
+            v = np.array([[vx],[vy],[vz]])
+            v_ref = np.array([[vx_r],[vy_r],[vz_r]])
 
-        Kp = np.diag([lqrg.Kp2, lqrg.Kp2, lqrg.Kp2])
-        Kd = np.diag([lqrg.Kd2, lqrg.Kd2, lqrg.Kd2])
-        Ki = np.diag([lqrg.Ki2, lqrg.Ki2, lqrg.Ki2])
+            Kp = np.diag([lqrg.Kp2, lqrg.Kp2, lqrg.Kp2])
+            Kd = np.diag([lqrg.Kd2, lqrg.Kd2, lqrg.Kd2])
+            Ki = np.diag([lqrg.Ki2, lqrg.Ki2, lqrg.Ki2])
 
-        self.pos_err = self.pos_err + (pos - pos_ref)
-        ua_e = -1.0*np.dot(Kp,pos-pos_ref) -1.0*np.dot(Kd,v-v_ref) -1.0*np.dot(Ki,self.pos_err)  # PID control law
-        #print("pos error mag: {}".format(np.linalg.norm(pos - pos_ref)))
-        #print("vel error mag: {}".format(np.linalg.norm(v-v_ref)))
-        ua_ref = np.array([[traj_msg.ua.x], [traj_msg.ua.y], [traj_msg.ua.z]])
+            self.pos_err = self.pos_err + (pos - pos_ref)
+            ua_e = -1.0*np.dot(Kp,pos-pos_ref) -1.0*np.dot(Kd,v-v_ref) -1.0*np.dot(Ki,self.pos_err)  # PID control law
+            #print("pos error mag: {}".format(np.linalg.norm(pos - pos_ref)))
+            #print("vel error mag: {}".format(np.linalg.norm(v-v_ref)))
+            ua_ref = np.array([[traj_msg.ua.x], [traj_msg.ua.y], [traj_msg.ua.z]])
 
-        ua = ua_e + ua_ref  # desired acceleration
-        #print("ua mag {}".format(np.linalg.norm(ua)))
-        ua = self.clip_vector(ua, self.max_thrust)   # saturate input
+            ua = ua_e + ua_ref  # desired acceleration
+            #print("ua mag {}".format(np.linalg.norm(ua)))
+            ua = self.clip_vector(ua, self.max_thrust)   # saturate input
 
-        # compute Thrust -T- as
-        #   T = m*wzb.T*(ua + g*zw)
-        #
-        e3 = np.array([[0.0],[0.0],[1.0]])  #  z axis of body expressed in body frame
-        zw = np.array([[0.0],[0.0],[1.0]])  #  z axis of world frame expressed in world frame 
-        #Rwb = tf.transformations.euler_matrix(psi, theta, phi, axes='rzyx') # world to body frame rotation
-        Rbw = Rwb[0:3,0:3].T  # get body to world frame rotation 
-        #print("Rbw real: \n{}".format(Rbw))
+            # compute Thrust -T- as
+            #   T = m*wzb.T*(ua + g*zw)
+            #
+            e3 = np.array([[0.0],[0.0],[1.0]])  #  z axis of body expressed in body frame
+            zw = np.array([[0.0],[0.0],[1.0]])  #  z axis of world frame expressed in world frame 
+            #Rwb = tf.transformations.euler_matrix(psi, theta, phi, axes='rzyx') # world to body frame rotation
+            Rbw = Rwb[0:3,0:3].T  # get body to world frame rotation 
+            #print("Rbw real: \n{}".format(Rbw))
 
-        wzb = np.dot(Rbw,e3) # zb expressed in world frame
-        T =  self.m*np.dot(wzb.T,(ua + g*zw))
-        #print("T: {}".format(T))
-        T = T[0][0]
+            wzb = np.dot(Rbw,e3) # zb expressed in world frame
+            self.T =  self.m*np.dot(wzb.T,(ua + g*zw))[0][0]
+            #print("T : {}".format(self.T))
+
+            # Following Fassler, Fontana, Theory and Math Behing RPG Quadrotor Control
+            #  Rbw_des = [xb_des yb_des zb_des]  with zb_des = ua + g*zw / ||ua + g*zw||
+            #  represents the desired orientation (and not the one coming from dif flatness)
+            zb_des = (ua + g*zw)/np.linalg.norm(ua + g*zw)
+            #T = self.m*np.dot(zb_des.T,(-ua + g*zw))[0][0]
+
+            #print("PSI value: {}".format(psi_r))
+            yc_des = np.array(df_flat.get_yc(psi_r))   #transform to np.array 'cause comes as np.matrix
+            xb_des = np.cross(yc_des, zb_des, axis=0)
+            xb_des = xb_des/np.linalg.norm(xb_des)
+            yb_des = np.cross(zb_des, xb_des, axis = 0)
+
+            self.Rbw_des = np.concatenate((xb_des, yb_des, zb_des), axis=1)
+
+            # Orientation error matrix is
+            # Rbw.T*Rbw_des  because iff Rbw = Rbw_des, then Rbw.T*Rbw_des = I_3
+
+            # Define orientation tracking error
+            or_e = 0.5*self.vex( (np.dot(self.Rbw_des.T,Rbw) - np.dot(Rbw.T,self.Rbw_des)) )
+
+            # Define angular velocity error
+            w_b = np.array([[p],[q],[r]])
+            w_b_r = np.array([[p_r],[q_r],[r_r]])
+            #print("w_b ref: \n{}".format(w_b_r))
+            self.w_b_des = np.dot(Rbw.T, np.dot(Rbw_ref,w_b_r))
+            #print("w_b des: \n{}".format(w_b_des))
+            w_b_e = w_b - np.dot(Rbw.T, np.dot(self.Rbw_des, self.w_b_des))
+            # compute input with PID control law
+
+            Kp = np.diag([lqrg.Kp1, lqrg.Kp1, lqrg.Kp1])
+            Kd = np.diag([lqrg.Kd1, lqrg.Kd1, lqrg.Kd1])
+            w_b_in = -np.dot(Kp,or_e) - np.dot(Kd,w_b_e)
+            
+            self.loops = self.loops + 1   
+
+        else:
+            self.loops = self.loops + 1
+            if(self.loops == self.pos_loop_freq):
+                self.loops = 0
+                #print("**Loops: {}".format(self.loops))
 
 
-        # Following Fassler, Fontana, Theory and Math Behing RPG Quadrotor Control
-        #  Rbw_des = [xb_des yb_des zb_des]  with zb_des = ua + g*zw / ||ua + g*zw||
-        #  represents the desired orientation (and not the one coming from dif flatness)
-        zb_des = (ua + g*zw)/np.linalg.norm(ua + g*zw)
-        #T = self.m*np.dot(zb_des.T,(-ua + g*zw))[0][0]
-
-        #print("PSI value: {}".format(psi_r))
-        yc_des = np.array(df_flat.get_yc(psi_r))   #transform to np.array 'cause comes as np.matrix
-        xb_des = np.cross(yc_des, zb_des, axis=0)
-        xb_des = xb_des/np.linalg.norm(xb_des)
-        yb_des = np.cross(zb_des, xb_des, axis = 0)
-
-        Rbw_des = np.concatenate((xb_des, yb_des, zb_des), axis=1)
-
-        # Orientation error matrix is
-        # Rbw.T*Rbw_des  because iff Rbw = Rbw_des, then Rbw.T*Rbw_des = I_3
-
-        # Define orientation tracking error
-        or_e = 0.5*self.vex( (np.dot(Rbw_des.T,Rbw) - np.dot(Rbw.T,Rbw_des)) )
-
-        # Define angular velocity error
-        w_b = np.array([[p],[q],[r]])
-        w_b_r = np.array([[p_r],[q_r],[r_r]])
-        #print("w_b ref: \n{}".format(w_b_r))
-        w_b_des = np.dot(Rbw_ref.T, np.dot(Rbw,w_b_r))
-        #print("w_b des: \n{}".format(w_b_des))
-        w_b_e = w_b - np.dot(Rbw.T, np.dot(Rbw_des, w_b_des))
-        # compute input with PID control law
-
-        Kp = np.diag([lqrg.Kp1, lqrg.Kp1, lqrg.Kp1])
-        Kd = np.diag([lqrg.Kd1, lqrg.Kd1, lqrg.Kd1])
-        w_b_in = -np.dot(Kp,or_e) - np.dot(Kd,w_b_e) 
+        print("Position Error: {}".format(np.linalg.norm(self.pos_err)))
+        print("T computed: {}".format(self.T))
 
 
-        or_des = np.array(df_flat.RotToRPY_ZYX(Rbw_des))  # ... need to convert to np.array to use this function..
+
+
+
+        or_des = np.array(df_flat.RotToRPY_ZYX(self.Rbw_des))  # ... need to convert to np.array to use this function..
         #print("Orientation des: {}".format(or_des))
         phi_des = or_des[0][0]
         theta_des = or_des[1][0]
         psi_des = or_des[2][0]
 
         # phi (x axis) angular position dynamics control law 
-        uc_e_x = -1.0*self.Kr*phi + (self.N_ur + np.dot(self.Kr,self.N_xr))*phi_r
+        uc_e_x = -1.0*self.Kr*phi + (self.N_ur + np.dot(self.Kr,self.N_xr))*phi_des
         # theta (y axis) angular position dynamics control law
-        uc_e_y = -1.0*self.Kr*theta + (self.N_ur + np.dot(self.Kr,self.N_xr))*theta_r
+        uc_e_y = -1.0*self.Kr*theta + (self.N_ur + np.dot(self.Kr,self.N_xr))*theta_des
         # psi (z axis) angular position dynamics control law
-        uc_e_z = -1.0*self.Kr*psi + (self.N_ur + np.dot(self.Kr,self.N_xr))*psi_r
+        uc_e_z = -1.0*self.Kr*psi + (self.N_ur + np.dot(self.Kr,self.N_xr))*psi_des
 
         #compose angular position dynamics input vector
         #uc_e = np.array([[uc_e_x[0]],[uc_e_y[0]],[uc_e_z[0]]])
@@ -497,17 +518,19 @@ class uav_Input_Publisher():
         rt_msg.header.stamp = rospy.Time.now()
         rt_msg.header.frame_id = 'uav/imu'
 
-        rt_msg.angular_rates.x = 0.0*w_b_des[0][0] + w_b_in[0][0] #- p_r #traj_msg.twist.angular.x
-        rt_msg.angular_rates.y = 0.0*w_b_des[1][0] + w_b_in[1][0] #- q_r  #traj_msg.twist.angular.y
-        rt_msg.angular_rates.z = 0.0*w_b_des[2][0] + w_b_in[2][0] #- r_r #traj_msg.twist.angular.z
+        rt_msg.angular_rates.x = self.w_b_des[0][0] + w_b_in[0][0] #- p_r #traj_msg.twist.angular.x
+        rt_msg.angular_rates.y = self.w_b_des[1][0] + w_b_in[1][0] #- q_r  #traj_msg.twist.angular.y
+        rt_msg.angular_rates.z = self.w_b_des[2][0] + w_b_in[2][0] #- r_r #traj_msg.twist.angular.z
 
         rt_msg.thrust.x = 0.0
         rt_msg.thrust.y = 0.0
-        rt_msg.thrust.z = T # self.m*np.linalg.norm(t)
+        rt_msg.thrust.z = self.T # self.m*np.linalg.norm(t)
         
         # publish
         self.input_publisher.publish(rt_msg)
-        rospy.loginfo(rt_msg)        
+        rospy.loginfo(rt_msg) 
+
+     
 
 
     # saturation function for scalars
