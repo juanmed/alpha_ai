@@ -5,6 +5,7 @@ import rospy
 import message_filters
 import tf
 import numpy as np
+from pyquaternion import Quaternion 
 
 # messages
 from tests.msg import UAV_traj
@@ -76,7 +77,15 @@ class uav_Input_Publisher():
         self.Rbw_des = np.diag([1.0,1.0,1.0])
         self.loops = 0
         self.w_b_des = np.zeros((3,1))
+        self.w_fb = np.zeros((3,1))
         self.pos_loop_freq = 30
+
+        # Orientation control feedback gains
+
+        self.Katt = np.zeros((3,4))
+        self.Katt[0][1] = 1.0
+        self.Katt[1][2] = 1.0
+        self.Katt[2][3] = 1.0
 
 
     def callback(self, state_msg, traj_msg):
@@ -387,12 +396,14 @@ class uav_Input_Publisher():
         ori_quat = [state_msg.pose.orientation.x, state_msg.pose.orientation.y, state_msg.pose.orientation.z, state_msg.pose.orientation.w]
         psi, theta, phi = tf.transformations.euler_from_quaternion(ori_quat, axes = 'rzyx')
         Rwb = tf.transformations.quaternion_matrix(ori_quat)
+        Rbw = Rwb[0:3,0:3].T  # get body to world frame rotation 
         p, q, r = [state_msg.twist.angular.x, state_msg.twist.angular.y, state_msg.twist.angular.z]
 
         # ******************************************#
         #            POSITION CONTROL LOOP
         # ******************************************#
-        if(self.loops == 0): #self.loops == 0
+        if(self.loops == 0): 
+
             # compute desired input ua = ua_ref + ua_e
             # ue_ref : from dif flatness
             # ua_e = -Kp*(p - p_ref) - Kd * (v - v_ref)    using PID controller
@@ -421,7 +432,6 @@ class uav_Input_Publisher():
             e3 = np.array([[0.0],[0.0],[1.0]])  #  z axis of body expressed in body frame
             zw = np.array([[0.0],[0.0],[1.0]])  #  z axis of world frame expressed in world frame 
             #Rwb = tf.transformations.euler_matrix(psi, theta, phi, axes='rzyx') # world to body frame rotation
-            Rbw = Rwb[0:3,0:3].T  # get body to world frame rotation 
             #print("Rbw real: \n{}".format(Rbw))
 
             wzb = np.dot(Rbw,e3) # zb expressed in world frame
@@ -445,8 +455,7 @@ class uav_Input_Publisher():
             # Orientation error matrix is
             # Rbw.T*Rbw_des  because iff Rbw = Rbw_des, then Rbw.T*Rbw_des = I_3
 
-            # Define orientation tracking error
-            or_e = 0.5*self.vex( (np.dot(self.Rbw_des.T,Rbw) - np.dot(Rbw.T,self.Rbw_des)) )
+
 
             # Define angular velocity error
             w_b = np.array([[p],[q],[r]])
@@ -457,9 +466,14 @@ class uav_Input_Publisher():
             w_b_e = w_b - np.dot(Rbw.T, np.dot(self.Rbw_des, self.w_b_des))
             # compute input with PID control law
 
+
+            # compute feedback angular velocity
+            self.w_fb = self.omega_fb(Rbw, self.Rbw_des, self.Katt)
+
+
             Kp = np.diag([lqrg.Kp1, lqrg.Kp1, lqrg.Kp1])
             Kd = np.diag([lqrg.Kd1, lqrg.Kd1, lqrg.Kd1])
-            w_b_in = -np.dot(Kp,or_e) - np.dot(Kd,w_b_e)
+            #w_b_in = -np.dot(Kp,or_e) - np.dot(Kd,w_b_e)
             
             self.loops = self.loops + 1   
 
@@ -473,9 +487,13 @@ class uav_Input_Publisher():
         print("Position Error: {}".format(np.linalg.norm(self.pos_err)))
         print("T computed: {}".format(self.T))
 
+        # ******************************************#
+        #        ORIENTATION CONTROL LOOP
+        # ******************************************#
 
-
-
+                        # ********************************** #
+                        #        USING EULER ANGLES          #
+                        # ********************************** #
 
         or_des = np.array(df_flat.RotToRPY_ZYX(self.Rbw_des))  # ... need to convert to np.array to use this function..
         #print("Orientation des: {}".format(or_des))
@@ -522,6 +540,21 @@ class uav_Input_Publisher():
         rt_msg.angular_rates.y = self.w_b_des[1][0] + w_b_in[1][0] #- q_r  #traj_msg.twist.angular.y
         rt_msg.angular_rates.z = self.w_b_des[2][0] + w_b_in[2][0] #- r_r #traj_msg.twist.angular.z
 
+
+
+                        # ********************************** #
+                        #      USING ROTATION MATRIX         #
+                        # ********************************** #
+
+        # Define orientation tracking error
+        or_e = 0.5*self.vex( (np.dot(self.Rbw_des.T,Rbw) - np.dot(Rbw.T,self.Rbw_des)) )
+
+        #rt_msg.angular_rates.x = 1.0*self.w_b_des[0][0] + 1.0*self.w_fb[0][0] #- p
+        #rt_msg.angular_rates.y = 1.0*self.w_b_des[1][0] + 1.0*self.w_fb[1][0] #- q
+        #rt_msg.angular_rates.z = 1.0*self.w_b_des[2][0] + 1.0*self.w_fb[2][0] #- r
+
+
+
         rt_msg.thrust.x = 0.0
         rt_msg.thrust.y = 0.0
         rt_msg.thrust.z = self.T # self.m*np.linalg.norm(t)
@@ -529,9 +562,6 @@ class uav_Input_Publisher():
         # publish
         self.input_publisher.publish(rt_msg)
         rospy.loginfo(rt_msg) 
-
-     
-
 
     # saturation function for scalars
     def clip_scalar(self, value, max_value):
@@ -568,6 +598,60 @@ class uav_Input_Publisher():
         mx[2][1] =  v[0][0]
         return mx
 
+    # compute angular velocity to reach desired orientation (expressed as rot matrix)
+    # from a current orientation (expressed as rot matrix)
+    # Kp is 4x3 matrix with first colum of zeros and rest of columns a 3x3 diagonal matrix
+    def omega_fb(self, Rbw, Rbw_des, Kp):
+        """
+        Take current and desired rotation matrices (body to world) and compute
+        error angular velocity. Uses quaternion representations
+        and computes as follows:
+        
+            omega = 2*Kp*q_e    where q_e = (q_inv)*q_des
+
+        See https://github.com/uzh-rpg/rpg_quadrotor_control/blob/master/documents/theory_and_math/theory_and_math.pdf
+        Section 4.2.1 Attitude Control for reference
+
+        """
+
+        # first transform to world->body frame rotations
+        Rwb = Rbw.T 
+        Rwb_des = Rbw_des.T
+
+        #convert into homogenous transformation
+        dummy1 = np.zeros((3,1))
+        dummy2 = np.zeros((1,4))
+        dummy2[0][3] = 1.0
+
+        Rwb = np.concatenate((Rwb,dummy1), axis = 1)
+        Rwb = np.concatenate((Rwb, dummy2), axis = 0)
+
+        Rwb_des = np.concatenate((Rwb_des,dummy1), axis = 1)
+        Rwb_des = np.concatenate((Rwb_des, dummy2), axis = 0)
+
+        # transform current and desired orientation to quaternions
+        q = tf.transformations.quaternion_from_matrix(Rwb)
+        q_des = tf.transformations.quaternion_from_matrix(Rwb_des)
+
+        # CAREFUL! tf uses q = [x y z w], pyquaternion uses q = [w x y z]
+        q = [q[3], q[0], q[1], q[2]]  
+        q_des = [q_des[3], q_des[0], q_des[1], q_des[2] ]
+
+        # Use an object that lets us apply quaternion operations easily
+        q = Quaternion(q)
+        q_des = Quaternion(q_des)
+
+        # calculate orientation error
+        q_e = q.inverse * q_des
+        q_e = np.array( [ [q_e[0]], [q_e[1]], [q_e[2]], [q_e[3]]] ) # back to np.array ....
+
+        # calculate angular velocity depending on value of quaternion's real part
+        if(q_e[0] >= 0.0):
+            w_fb = 2.0*np.dot(Kp,q_e)
+        else:
+            w_fb = -2.0*np.dot(Kp,q_e)
+
+        return w_fb
 
     def publish_thrust(self, thrust):
 

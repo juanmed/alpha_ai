@@ -65,8 +65,8 @@ class Trajectory_Generator():
             is_quaternion = False
             self.keyframe = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
 
-        self.total_time = 20
-        self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count, self.total_time)
+        #self.total_time = 40
+        #self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count, self.total_time)
 
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count, self.t, self.keyframe)
