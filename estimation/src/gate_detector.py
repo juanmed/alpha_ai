@@ -6,16 +6,20 @@ import cv2
 import re
 from math import sqrt, sin, cos, asin, atan2
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Vector3
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import CameraInfo
 from flightgoggles.msg import IRMarker, IRMarkerArray
 
 
 class GateDetector():
+    def camera_info_cb(self, camera_info):
+        self.camera_matrix = np.array(camera_info.K).reshape(3, 3)
+
+
     def ir_cb(self, ir_array):
         num = len(ir_array.markers)
-        print num
-        if num >= 8:
+        if num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
             for i in range(0, num):
@@ -56,14 +60,35 @@ class GateDetector():
         return R
 
 
-    def setState(self, rvec, tvec):
-        R = self.rodrigues2rotation(rvec).T
-        t = np.dot(-R, tvec)
-        
+    def rotation2quaternion(self, R):
         qw = sqrt(1 + R[0][0] + R[1][1] + R[2][2]) / 2
         qx = (R[2][1] - R[1][2]) / (4*qw)
         qy = (R[0][2] - R[2][0]) / (4*qw)
         qz = (R[1][0] - R[0][1]) / (4*qw)
+        return qw, qx, qy, qz
+
+
+    def rotation2euler(self, R):
+        pi = atan2(R[2][1], R[2][2])
+        theta = asin(-R[2][0])
+        psi = atan2(R[1][0], R[0][0])
+        return pi, theta, psi
+
+
+    def euler2quaternion(self, pi, theta, psi):
+        qw = cos(pi/2)*cos(theta/2)*cos(psi/2) + sin(pi/2)*sin(theta/2)*sin(psi/2)
+        qx = sin(pi/2)*cos(theta/2)*cos(psi/2) - cos(pi/2)*sin(theta/2)*sin(psi/2)
+        qy = sin(pi/2)*cos(theta/2)*sin(psi/2) + cos(pi/2)*sin(theta/2)*cos(psi/2)
+        qz = cos(pi/2)*cos(theta/2)*sin(psi/2) - sin(pi/2)*sin(theta/2)*cos(psi/2)
+        return qw, qx, qy, qz
+
+
+    def setState(self, rvec, tvec):
+        R = self.rodrigues2rotation(rvec).T
+        t = np.dot(-R, tvec)
+        
+        (pi, theta, psi) = self.rotation2euler(R)
+        (qw, qx, qy, qz) = self.euler2quaternion(pi, theta, psi)
 
         self.state.position.x = t[0][0]
         self.state.position.y = t[1][0]
@@ -73,12 +98,13 @@ class GateDetector():
         self.state.orientation.z = qz
         self.state.orientation.w = qw
 
-        print self.state
-
 
     def __init__(self):
         rospy.init_node('gate_detector')
-        self.r = rospy.Rate(100)
+        self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
+        
+        self.rate = 10
+        self.r = rospy.Rate(self.rate)
 
         self.camera_matrix = np.array([[548.4088134765625, 0.0, 512.0],
                                        [0.0, 548.4088134765625, 384.0],
@@ -90,12 +116,36 @@ class GateDetector():
             for j in range(0, 4):
                 for k in range(0, 3):
                     self.gate_location[i][j][k] = location[j][k]
+        rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
-        self.pub_pose = rospy.Publisher('/uav/pose_gate', Pose, queue_size=10)
+        self.pub_pose = rospy.Publisher('/uav/ir_pose', Pose, queue_size=10)
+        self.pub_velocity = rospy.Publisher('/uav/ir_velocity', Vector3, queue_size=10)
         self.state = Pose()
+        self.state.position.x = self.init_pose[0]
+        self.state.position.y = self.init_pose[1]
+        self.state.position.z = self.init_pose[2]
+        self.velocity = Vector3()
+        self.velocity_tmp = Vector3()
+        self.x_tmp = self.init_pose[0]
+        self.y_tmp = self.init_pose[1]
+        self.z_tmp = self.init_pose[2]
+
+        self.limit_acc = 20
 
 
     def loop(self):
+        self.x_tmp, self.state.position.x
+        self.velocity.x = (self.state.position.x - self.x_tmp) * self.rate
+        self.velocity.y = (self.state.position.y - self.y_tmp) * self.rate
+        self.velocity.z = (self.state.position.z - self.z_tmp) * self.rate
+        if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) < self.limit_acc:
+            self.pub_velocity.publish(self.velocity)
+            print self.velocity
+            self.velocity_tmp = self.velocity
+
+        self.x_tmp = self.state.position.x
+        self.y_tmp = self.state.position.y
+        self.z_tmp = self.state.position.z
         self.r.sleep()
 
 

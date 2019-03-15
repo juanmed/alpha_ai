@@ -5,13 +5,13 @@ import compute_constraint
 import numpy as np
 
 
-def qp_solution(order, n, gate, t, keyframe):
+def qp_solution(order, n, waypoint, t, keyframe):
     # compute P, q, A, b
-    compute_p_cls = compute_p.ComputeP(order, gate, 1, 1, 4, 2, t)
+    compute_p_cls = compute_p.ComputeP(order, waypoint-1, 1, 1, 4, 2, t)
     P = compute_p_cls.compute_p()
     P = 2 * P
-    q = matrix(0.0, (gate * (order + 1) * n, 1))
-    compute_constraint_cls = compute_constraint.ComputeConstraint(order, gate, 4, 2, t, keyframe, None, None, None)
+    q = matrix(0.0, ((waypoint-1) * (order + 1) * n, 1))
+    compute_constraint_cls = compute_constraint.ComputeConstraint(order, waypoint-1, 4, 2, t, keyframe, None, None, None)
     A, b = compute_constraint_cls.compute_eq()
 
     # quadratic programming

@@ -4,9 +4,9 @@ import math
 
 
 class ComputeP:
-    def __init__(self, order, keyframe, mu_r, mu_psi, k_r, k_psi, t):
+    def __init__(self, order, m, mu_r, mu_psi, k_r, k_psi, t):
         self.order = order
-        self.keyframe = keyframe
+        self.m = m
         self.mu_r = mu_r
         self.mu_psi = mu_psi
         self.k_r = k_r
@@ -22,7 +22,7 @@ class ComputeP:
         for i in range(0, self.k_psi):
             polynomial_psi = np.polyder(polynomial_psi)
 
-        for i in range(0, self.keyframe):
+        for i in range(0, self.m):
             p_x = np.zeros((self.order + 1, self.order + 1))
             p_y = np.zeros((self.order + 1, self.order + 1))
             p_z = np.zeros((self.order + 1, self.order + 1))

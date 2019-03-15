@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def draw_trajectory(solution, order, gate, n, t, keyframe):
+def draw_trajectory(solution, order, waypoint, n, t, keyframe):
     x_trajec = []
     y_trajec = []
     z_trajec = []
     psi_trajec = []
 
-    for i in range(0, gate):
+    for i in range(0, waypoint-1):
         # we can use np.arrange instead of np.linspace
         x_trajec = np.append(x_trajec, np.polyval(
             solution[i * n * (order + 1) + 0 * (order + 1): i * n * (order + 1) + (order + 1) + 0 * (order + 1)],
@@ -42,7 +42,7 @@ def draw_trajectory(solution, order, gate, n, t, keyframe):
     # plot Yaw
     ax2 = fig.add_subplot(212)
     ax2.set_title('psi')
-    ax2.set_ylim(-1.8, 1.8)
+    ax2.set_ylim(-3.14, 3.14)
     ax2.plot(psi_trajec, 'b')
 
     plt.show()
