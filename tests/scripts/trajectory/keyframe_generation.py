@@ -8,7 +8,7 @@ import tf
 class KeyframeGeneration:
 
     def __init__(self):
-        pass
+        self.keyframe = np.array([])
 
     def keyframe_generation(self, current_pose, is_quaternion, gate_location, gate_count):
         if is_quaternion is True:
@@ -18,19 +18,13 @@ class KeyframeGeneration:
             current_pose = init_pose
 
         # generate keyframe
-        keyframe = np.array(current_pose)
+        self.keyframe = np.array([current_pose])
         for i in range(0, gate_count):
             #print self.compute_pose(gate_location[i])
-            keyframe = np.vstack((keyframe, self.compute_pose(gate_location[i])))
-            # compensate gate direction
-            if self.compensate_direction(keyframe[i+1], keyframe[i]):
-                if keyframe[i+1][3] <= 0:
-                    keyframe[i+1][3] = keyframe[i+1][3] + 3.14
-                else:
-                    keyframe[i+1][3] = keyframe[i+1][3] - 3.14
+            self.keyframe = np.vstack((self.keyframe, self.compute_pose(gate_location[i])))
 
-        waypoint = np.size(keyframe)/4
-        keyframe = np.reshape(keyframe, (waypoint, 4))
+        waypoint = np.size(self.keyframe)/4
+        keyframe = np.reshape(self.keyframe, (waypoint, 4))
         keyframe = np.transpose(keyframe)
 
         # include initial position
@@ -50,30 +44,35 @@ class KeyframeGeneration:
         v1 = p3-p1
         v2 = p2-p1
         cp = np.cross(v1, v2)
-
         gate_psi = np.arctan2(cp[1], cp[0])
+
+        print "hi"
         gate_pose = np.array([gate_x, gate_y, gate_z, gate_psi])
-
-        #gate_pose = self.add_waypoint(gate_pose, cp)
-
+        # compensate gate direction
+        if self.compensate_direction(gate_pose):
+            cp = -cp
+            gate_psi = np.arctan2(cp[1], cp[0])
+            gate_pose[3] = gate_psi
+            print cp
+        gate_pose = self.add_waypoint(gate_pose, cp)
         return gate_pose
 
     # add before and after waypoint at certain gate
     def add_waypoint(self, gate_pose, cp):
-        relaxation = 0.5
+        relaxation = 5
+        cp = cp / np.linalg.norm(cp)
         before_waypoint = np.array([gate_pose[0]-cp[0]*relaxation, gate_pose[1]-cp[1]*relaxation, gate_pose[2]-cp[2]*relaxation, gate_pose[3]])
         after_waypoint = np.array([gate_pose[0]+cp[0]*relaxation, gate_pose[1]+cp[1]*relaxation, gate_pose[2]+cp[2]*relaxation, gate_pose[3]])
-        gate_pose = np.append(before_waypoint, gate_pose)
-        gate_pose = np.append(gate_pose, after_waypoint)
-
+        gate_pose = np.vstack((before_waypoint, gate_pose, after_waypoint))
         return gate_pose
 
-    def compensate_direction(self, keyframe1, keyframe2):
-        x_vector = keyframe1[0] - keyframe2[0]
-        y_vector = keyframe1[1] - keyframe2[1]
-        z_vector = keyframe1[2] - keyframe2[2]
+    def compensate_direction(self, gate_pose):
+        keyframe = self.keyframe[len(self.keyframe)-1]
+        x_vector = gate_pose[0] - keyframe[0]
+        y_vector = gate_pose[1] - keyframe[1]
+        z_vector = gate_pose[2] - keyframe[2]
         vector = np.array([x_vector, y_vector, z_vector])
-        gate_direction = ([np.cos(keyframe1[3]), np.sin(keyframe1[3]), 0])
+        gate_direction = ([np.cos(gate_pose[3]), np.sin(gate_pose[3]), 0])
         dotproduct = np.dot(vector, gate_direction)
         cosangle = dotproduct/(np.linalg.norm(vector)*np.linalg.norm(gate_direction))
         if cosangle < 0 :
