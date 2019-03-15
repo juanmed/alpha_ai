@@ -7,9 +7,8 @@ from scipy.signal import cont2discrete
 from math import sin, cos, tan, asin, acos, atan2, sqrt
 
 from geometry_msgs.msg import PoseWithCovarianceStamped, Vector3
-from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, Range
-from tests.msg import UAV_input
+from tests.msg import UAV_input, UAV_state
 
 
 class KalmanFilter():
@@ -47,10 +46,31 @@ class KalmanFilter():
         self.vision_tf = True
 
 
+    def ir_velocity_cb(self, velocity):
+        self.z[6][0] = velocity.x
+        self.z[7][0] = velocity.y
+        self.z[8][0] = velocity.z
+        self.ir_velocity_tf = True
+
+
+    def ir_pose_cb(self, pose):
+        self.z[9][0] = pose.position.x
+        self.z[10][0] = pose.position.y
+        self.z[11][0] = pose.position.z
+        self.ir_pose_tf = True
+
+
+    def range_cb(self, rangefinder):
+        pi = self.x_est[3][0]
+        theta = self.x_est[4][0]
+        self.z[12][0] = (-rangefinder.range) * abs(cos(pi)*cos(theta))
+        self.R[12][12] = self.range_var * abs(cos(pi)*cos(theta))
+
+
     def imu_cb(self, imu):
-        self.z[7][0] = imu.angular_velocity.x   # p
-        self.z[8][0] = imu.angular_velocity.y   # q
-        self.z[9][0] = imu.angular_velocity.z   # r
+        self.z[13][0] = imu.angular_velocity.x   # p
+        self.z[14][0] = imu.angular_velocity.y   # q
+        self.z[15][0] = imu.angular_velocity.z   # r
 
         ax_b = imu.linear_acceleration.x
         ay_b = imu.linear_acceleration.y
@@ -61,13 +81,6 @@ class KalmanFilter():
 
         #self.z[10][0] = pi_acc
         #self.z[11][0] = theta_acc
-
-
-    def range_cb(self, rangefinder):
-        pi = self.x_est[3][0]
-        theta = self.x_est[4][0]
-        self.z[6][0] = (-rangefinder.range) * abs(cos(pi)*cos(theta))
-        self.R[6][6] = self.range_var * abs(cos(pi)*cos(theta))
 
 
     def getFB(self):
@@ -105,23 +118,6 @@ class KalmanFilter():
                            [0, self.arm_length/(2**0.5)/self.Ixx, 0, 0],
                            [0, 0, self.arm_length/(2**0.5)/self.Iyy, 0],
                            [0, 0, 0, self.k_torque/self.k_thrust/self.Izz]])
-
-
-    def getH(self):
-        z = self.x_est[2][0]
-        pi = self.x_est[3][0]
-        theta = self.x_est[4][0]
-
-        self.H = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],	# visualo dometry
-                           [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],	# IMU
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
 
 
     def fx(self, X, U):
@@ -168,11 +164,15 @@ class KalmanFilter():
         pi = X[3][0]
         theta = X[4][0]
         psi = X[5][0]
+        vx = X[6][0]
+        vy = X[7][0]
+        vz = X[8][0]
         p = X[9][0]
         q = X[10][0]
         r = X[11][0]
 
         hx = np.array([[x], [y], [z], [pi], [theta], [psi],
+                       [vx], [vy], [vz], [x], [y], [z],
                        [z],
                        [p], [q], [r]])
         return hx
@@ -214,19 +214,19 @@ class KalmanFilter():
 
     def setState(self):
         self.state.header.stamp = rospy.Time.now()
-        self.state.pose.pose.position.x = self.x_est[0][0]
-        self.state.pose.pose.position.y = self.x_est[1][0]
-        self.state.pose.pose.position.z = self.x_est[2][0]
-        self.state.pose.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
-        self.state.pose.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
-        self.state.pose.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
-        self.state.pose.pose.orientation.w = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) + sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
-        self.state.twist.twist.linear.x = self.x_est[6][0]
-        self.state.twist.twist.linear.y = self.x_est[7][0]
-        self.state.twist.twist.linear.z = self.x_est[8][0]
-        self.state.twist.twist.angular.x = self.x_est[9][0]
-        self.state.twist.twist.angular.y = self.x_est[10][0]
-        self.state.twist.twist.angular.z = self.x_est[11][0]
+        self.state.pose.position.x = self.x_est[0][0]
+        self.state.pose.position.y = self.x_est[1][0]
+        self.state.pose.position.z = self.x_est[2][0]
+        self.state.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
+        self.state.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
+        self.state.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
+        self.state.pose.orientation.w = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) + sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
+        self.state.twist.linear.x = self.x_est[6][0]
+        self.state.twist.linear.y = self.x_est[7][0]
+        self.state.twist.linear.z = self.x_est[8][0]
+        self.state.twist.angular.x = self.x_est[9][0]
+        self.state.twist.angular.y = self.x_est[10][0]
+        self.state.twist.angular.z = self.x_est[11][0]
 
         self.position.x = self.x_est[0][0]
         self.position.y = self.x_est[1][0]
@@ -260,7 +260,7 @@ class KalmanFilter():
         self.range_var = rospy.get_param('/uav/flightgoggles_laser/rangefinder_variance')
         self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
 
-        self.rate = 100
+        self.rate = 200
         self.r = rospy.Rate(self.rate)
         self.dT = 1.0/self.rate
 
@@ -270,11 +270,17 @@ class KalmanFilter():
                            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],	# ir marker
+                           [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                           [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],	# rangefinder
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],	# IMU
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
-        self.D = np.zeros((10, 4))
+        self.D = np.zeros((16, 4))
 
         
         self.Q = np.array([[0.0005, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -290,24 +296,30 @@ class KalmanFilter():
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
         
-        self.R = np.array([[0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0],       # visual odometry
-                           [0, 0.000001, 0, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0.000001, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0.000001, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0.000001, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0.000001, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0, self.range_var, 0, 0, 0], # rangefinder
-                           [0, 0, 0, 0, 0, 0, 0, self.gyro_var, 0, 0],  # IMU
-                           [0, 0, 0, 0, 0, 0, 0, 0, self.gyro_var, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, self.gyro_var]])
+        self.R = np.array([[0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],       # visual odometry
+                           [0, 0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0.000001, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0.00001, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0.00001, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0.00001, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.00001, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.00001, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.00001, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, self.range_var, 0, 0, 0], # rangefinder
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, self.gyro_var, 0, 0],  # IMU
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, self.gyro_var, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, self.gyro_var]])
 
         self.P_pre = np.eye(12)#np.ones((12, 12))*0.001
         self.P_est = np.eye(12)#np.ones((12, 12))*0.001
 
         self.x_pre = np.zeros((12, 1))
         self.x_est = np.zeros((12, 1))
-        self.z = np.zeros((10, 1))
-        self.hx = np.zeros((10, 1))
+        self.z = np.zeros((16, 1))
+        self.hx = np.zeros((16, 1))
         self.u = np.zeros((4, 1))
 
         self.x_est[0][0] = self.init_pose[0]
@@ -321,20 +333,25 @@ class KalmanFilter():
         self.x_est[4][0] = asin(2*(w*y-z*x))
         self.x_est[5][0] = atan2(2*(w*z+x*y), 1-2*(pow(y, 2)+pow(z, 2)))
 
-        self.vision_tf = False
         self.scale = 0.055 #*202/185
+        self.vision_tf = False
+        self.ir_pose_tf = False
+        self.ir_velocity_tf = False
 
         rospy.Subscriber('/uav_input', UAV_input, self.input_cb)
         rospy.Subscriber('/svo/pose_imu', PoseWithCovarianceStamped, self.vision_cb)
+        rospy.Subscriber('/uav/ir_velocity', Vector3, self.ir_velocity_cb)
+        rospy.Subscriber('/uav/ir_pose', Pose, self.ir_pose_cb)
         rospy.Subscriber('/uav/sensors/imu', Imu, self.imu_cb)
         rospy.Subscriber('/uav/sensors/downward_laser_rangefinder', Range, self.range_cb)
+        
         self.pub_state = rospy.Publisher('/uav/state', Odometry, queue_size=10)
         self.pub_position = rospy.Publisher('/uav/position', Vector3, queue_size=10)
         self.pub_attitude = rospy.Publisher('/uav/attitude', Vector3, queue_size=10)
         self.pub_linear_velocity = rospy.Publisher('/uav/linear_velocity', Vector3, queue_size=10)
         self.pub_angular_velocity = rospy.Publisher('/uav/angular_velocity', Vector3, queue_size=10)
 
-        self.state = Odometry()
+        self.state = UAV_state()
         self.position = Vector3()
         self.attitude = Vector3()
         self.linear_velocity = Vector3()
@@ -347,24 +364,39 @@ class KalmanFilter():
     def loop(self):
         # predict
         self.getFB()
-        self.getH()
         (self.Fd, self.Bd, self.H, self.D, self.dT) = cont2discrete((self.F, self.B, self.H, self.D), self.dT)
         self.x_pre = self.fx(self.x_est, self.u)
         self.P_pre = multi_dot([self.Fd, self.P_est, self.Fd.T]) + self.Q
 
         # calculate Kalman Gain, estimate
         if self.vision_tf is True:
+            print 'full'
             self.K = multi_dot([self.P_pre, self.H.T, inv(multi_dot([self.H, self.P_pre, self.H.T]) + self.R)])
             self.hx = self.gethx(self.x_pre)
             self.x_est = self.x_pre + np.dot(self.K, self.z - self.hx)
             #self.P_est = np.dot(np.eye(12)-np.dot(self.K, self.H), self.P_pre)
             self.P_est = multi_dot([np.eye(12)-np.dot(self.K, self.H), self.P_pre, (np.eye(12)-np.dot(self.K, self.H)).T]) + multi_dot([self.K, self.R, self.K.T])
+        elif self.ir_pose_tf is True:
+            if self.ir_velocity_tf is True:
+                print 'no VO'
+                self.K = multi_dot([self.P_pre, self.H[6:, :].T, inv(multi_dot([self.H[6:, :], self.P_pre, self.H[6:, :].T]) + self.R[6:, 6:])])
+                self.hx = self.gethx(self.x_pre)
+                self.x_est = self.x_pre + np.dot(self.K, self.z[6:, :] - self.hx[6:, :])
+                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[6:, :]), self.P_pre)
+                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[6:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[6:, :])).T]) + multi_dot([self.K, self.R[6:, 6:], self.K.T])
+            else:
+                print 'no VO, no velocity'
+                self.K = multi_dot([self.P_pre, self.H[9:, :].T, inv(multi_dot([self.H[9:, :], self.P_pre, self.H[9:, :].T]) + self.R[9:, 9:])])
+                self.hx = self.gethx(self.x_pre)
+                self.x_est = self.x_pre + np.dot(self.K, self.z[9:, :] - self.hx[9:, :])
+                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre)
+                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
         else:
-            self.K = multi_dot([self.P_pre, self.H[6:, :].T, inv(multi_dot([self.H[6:, :], self.P_pre, self.H[6:, :].T]) + self.R[6:, 6:])])
+            self.K = multi_dot([self.P_pre, self.H[12:, :].T, inv(multi_dot([self.H[12:, :], self.P_pre, self.H[12:, :].T]) + self.R[12:, 12:])])
             self.hx = self.gethx(self.x_pre)
-            self.x_est = self.x_pre + np.dot(self.K, self.z[6:, :] - self.hx[6:, :])
-            #self.P_est = np.dot(np.eye(12)-np.dot(self.K, self.H[6:, :]), self.P_pre)
-            self.P_est = multi_dot([np.eye(12)-np.dot(self.K, self.H[6:, :]), self.P_pre, (np.eye(12)-np.dot(self.K, self.H[6:, :])).T]) + multi_dot([self.K, self.R[6:, 6:], self.K.T])
+            self.x_est = self.x_pre + np.dot(self.K, self.z[12:, :] - self.hx[12:, :])
+            #self.P_est = np.dot(np.eye(12)-np.dot(self.K, self.H[12:, :]), self.P_pre)
+            self.P_est = multi_dot([np.eye(12)-np.dot(self.K, self.H[12:, :]), self.P_pre, (np.eye(12)-np.dot(self.K, self.H[12:, :])).T]) + multi_dot([self.K, self.R[12:, 12:], self.K.T])
 
         self.limitAngle()
         self.setState()
@@ -376,6 +408,8 @@ class KalmanFilter():
         self.pub_attitude_vo.publish(self.attitude_vo)
 
         self.vision_tf = False
+        self.ir_pose_tf = False
+        self.ir_velocity_tf = False
         self.r.sleep()
 
 
