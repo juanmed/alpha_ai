@@ -19,6 +19,7 @@ import trajectory.draw_trajectory as draw_trajectory
 import trajectory.trajgen2_helper as trajGen3D
 import trajectory.get_gate_location as get_gate_location
 import trajectory.optimal_time as optimal_time
+import trajectory.gate_event as gate_event
 import matplotlib.pyplot as plt
 
 
@@ -32,6 +33,9 @@ class Trajectory_Generator():
         # init parameters
         self.order = 10
         self.n = 4
+
+        self.inflation = parameter.inflation
+        self.tolerance = parameter.tolerance
 
         if self.level is True:
             self.gate_name = parameter.gate_name
@@ -65,6 +69,10 @@ class Trajectory_Generator():
             is_quaternion = False
             self.keyframe = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
 
+        self.gates = []
+        for i in range(self.gate_count):
+            self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
+
         self.total_time = 20
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count, self.total_time)
 
@@ -72,7 +80,7 @@ class Trajectory_Generator():
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count, self.t, self.keyframe)
 
         # draw trajectory in plot
-        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate_count, self.n, self.t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.gate_count, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -83,12 +91,11 @@ class Trajectory_Generator():
         self.i = 0
 
     def compute_reference_traj(self, time):
-
         ref_time = time - self.start_time
         x = self.sol_x[self.n*(self.order+1)*self.i: self.n*(self.order+1)*(self.i+1)] 
         flatout_trajectory = compute_trajectory.compute_trajectory(x, self.order, ref_time)
-        ref_trajectory = df_flat.compute_ref(flatout_trajectory)  
-        
+        ref_trajectory = df_flat.compute_ref(flatout_trajectory)
+
         if (time - self.last_time) > (self.t[self.i+1] - self.t[self.i]):
             #print time
             self.i = self.i + 1   # trajectory to next gate
@@ -100,11 +107,16 @@ class Trajectory_Generator():
 
         return ref_trajectory
 
-    def pass_gate(self):
-        self.passed_gate = self.passed_gate + 1
+    # checking whether drone pass gate or not
+    # It needs current position of drone.
+    def check_gate(self, current_position):
+        if self.gates[self.passed_gate].isEvent(current_position, self.tolerance):
+            self.passed_gate = self.passed_gate + 1
+            print "pass %d gate" % self.passed_gate
 
+    # keyframe and trajectory update
+    # It needs current position of drone.
     def trajectory_update(self, current_pose, pass_time):
-
         # delete previous pose and gate location which was passed before.
         for i in range(0, self.passed_gate + 1):
             self.keyframe = np.delete(self.keyframe, 0, axis=0)
@@ -289,7 +301,6 @@ def pub_traj():
             # Compute trajectory at time = now
             time = rospy.get_time()   
             ref_traj = traj_gen.compute_reference_traj(time)
-            
 
             # create and fill message
             traj = UAV_traj()
