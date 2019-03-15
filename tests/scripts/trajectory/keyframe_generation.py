@@ -38,7 +38,18 @@ class KeyframeGeneration:
 
         # normal_vector = -1 * x_vector / y_vector    we should check this...
         gate_psi = np.arctan2(-x_vector, y_vector)
-        print gate_psi
+        print "my method: %s" % gate_psi
+
+        # cross product
+        p1 = gate[0, :]
+        p2 = gate[1, :]
+        p3 = gate[2, :]
+
+        v1 = p3-p1
+        v2 = p2-p1
+        cp = np.cross(v1, v2)
+        print "cross product: %s" % np.arctan2(cp[1], cp[0])
+
         gate_pose = np.array([gate_x, gate_y, gate_z, gate_psi])
 
         return gate_pose
