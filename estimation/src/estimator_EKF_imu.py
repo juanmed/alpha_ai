@@ -7,7 +7,6 @@ from scipy.signal import cont2discrete
 from math import sin, cos, tan, asin, acos, atan2, sqrt
 
 from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Vector3
-from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, Range
 from tests.msg import UAV_state
 
