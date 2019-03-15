@@ -6,7 +6,7 @@ import cv2
 import re
 from math import sqrt, sin, cos, asin, atan2
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Vector3
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import CameraInfo
 from flightgoggles.msg import IRMarker, IRMarkerArray
@@ -19,7 +19,6 @@ class GateDetector():
 
     def ir_cb(self, ir_array):
         num = len(ir_array.markers)
-        print num
         if num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
@@ -99,12 +98,13 @@ class GateDetector():
         self.state.orientation.z = qz
         self.state.orientation.w = qw
 
-        print self.state
-
 
     def __init__(self):
         rospy.init_node('gate_detector')
-        self.r = rospy.Rate(100)
+        self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
+        
+        self.rate = 10
+        self.r = rospy.Rate(self.rate)
 
         self.camera_matrix = np.array([[548.4088134765625, 0.0, 512.0],
                                        [0.0, 548.4088134765625, 384.0],
@@ -118,11 +118,34 @@ class GateDetector():
                     self.gate_location[i][j][k] = location[j][k]
         rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
-        self.pub_pose = rospy.Publisher('/uav/ir_marker', Pose, queue_size=10)
+        self.pub_pose = rospy.Publisher('/uav/ir_pose', Pose, queue_size=10)
+        self.pub_velocity = rospy.Publisher('/uav/ir_velocity', Vector3, queue_size=10)
         self.state = Pose()
+        self.state.position.x = self.init_pose[0]
+        self.state.position.y = self.init_pose[1]
+        self.state.position.z = self.init_pose[2]
+        self.velocity = Vector3()
+        self.velocity_tmp = Vector3()
+        self.x_tmp = self.init_pose[0]
+        self.y_tmp = self.init_pose[1]
+        self.z_tmp = self.init_pose[2]
+
+        self.limit_acc = 20
 
 
     def loop(self):
+        self.x_tmp, self.state.position.x
+        self.velocity.x = (self.state.position.x - self.x_tmp) * self.rate
+        self.velocity.y = (self.state.position.y - self.y_tmp) * self.rate
+        self.velocity.z = (self.state.position.z - self.z_tmp) * self.rate
+        if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) > self.limit_acc:
+            self.pub_velocity.publish(self.velocity)
+            print self.velocity
+            self.velocity_tmp = self.velocity
+
+        self.x_tmp = self.state.position.x
+        self.y_tmp = self.state.position.y
+        self.z_tmp = self.state.position.z
         self.r.sleep()
 
 
