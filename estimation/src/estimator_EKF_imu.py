@@ -9,7 +9,7 @@ from math import sin, cos, tan, asin, acos, atan2, sqrt
 from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Vector3
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, Range
-from tests.msg import UAV_input
+from tests.msg import UAV_state
 
 
 class KalmanFilter():
@@ -199,19 +199,19 @@ class KalmanFilter():
 
     def setState(self):
         self.state.header.stamp = rospy.Time.now()
-        self.state.pose.pose.position.x = self.x_est[0][0]
-        self.state.pose.pose.position.y = self.x_est[1][0]
-        self.state.pose.pose.position.z = self.x_est[2][0]
-        self.state.pose.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
-        self.state.pose.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
-        self.state.pose.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
-        self.state.pose.pose.orientation.w = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) + sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
-        self.state.twist.twist.linear.x = self.x_est[6][0]
-        self.state.twist.twist.linear.y = self.x_est[7][0]
-        self.state.twist.twist.linear.z = self.x_est[8][0]
-        self.state.twist.twist.angular.x = self.u[0][0]
-        self.state.twist.twist.angular.y = self.u[1][0]
-        self.state.twist.twist.angular.z = self.u[2][0]
+        self.state.pose.position.x = self.x_est[0][0]
+        self.state.pose.position.y = self.x_est[1][0]
+        self.state.pose.position.z = self.x_est[2][0]
+        self.state.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
+        self.state.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
+        self.state.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
+        self.state.pose.orientation.w = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) + sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
+        self.state.twist.linear.x = self.x_est[6][0]
+        self.state.twist.linear.y = self.x_est[7][0]
+        self.state.twist.linear.z = self.x_est[8][0]
+        self.state.twist.angular.x = self.u[0][0]
+        self.state.twist.angular.y = self.u[1][0]
+        self.state.twist.angular.z = self.u[2][0]
 
         self.position.x = self.x_est[0][0]
         self.position.y = self.x_est[1][0]
@@ -318,14 +318,14 @@ class KalmanFilter():
         rospy.Subscriber('/uav/ir_pose', Pose, self.ir_pose_cb)
         rospy.Subscriber('/uav/sensors/downward_laser_rangefinder', Range, self.range_cb)
 
-        self.pub_state = rospy.Publisher('/uav/state', Odometry, queue_size=10)
+        self.pub_state = rospy.Publisher('/uav/state', UAV_state, queue_size=10)
         self.pub_position = rospy.Publisher('/uav/position', Vector3, queue_size=10)
         self.pub_attitude = rospy.Publisher('/uav/attitude', Vector3, queue_size=10)
         self.pub_linear_velocity = rospy.Publisher('/uav/linear_velocity', Vector3, queue_size=10)
         self.pub_attitude_vo = rospy.Publisher('/uav/attitude_vo', Vector3, queue_size=10)
         self.pub_inertial_acceleration = rospy.Publisher('/uav/inertial_acceleration', Vector3, queue_size=10)
 
-        self.state = Odometry()
+        self.state = UAV_state()
         self.position = Vector3()
         self.attitude = Vector3()
         self.linear_velocity = Vector3()

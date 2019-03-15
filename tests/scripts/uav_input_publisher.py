@@ -11,6 +11,7 @@ from pyquaternion import Quaternion
 from tests.msg import UAV_traj
 from tests.msg import UAV_state
 from mav_msgs.msg import RateThrust
+from nav_msgs.msg import Odometry
 
 # import libraries
 import trajectory.df_flat as df_flat
@@ -26,9 +27,24 @@ class uav_Input_Publisher():
         # publisher 
         self.input_publisher = rospy.Publisher('/uav/input/rateThrust', RateThrust, queue_size = 10)
 
-        # create message message_filter
-        self.state_sub = message_filters.Subscriber('/uav_state', UAV_state)
         self.reftraj_sub = message_filters.Subscriber('/uav_ref_trajectory', UAV_traj)
+
+        # Switch between modes
+        self.mode = 2   # 1: use true state,  2: use estimated state
+        if( self.mode == 1):
+
+            # create message message_filter
+            self.state_sub = message_filters.Subscriber('/uav_state', UAV_state)
+
+        elif( self.mode == 2):
+
+            # create message message_filter
+            self.state_sub = message_filters.Subscriber('/uav/state', UAV_state)
+
+        else:
+            # create message message_filter
+            self.state_sub = message_filters.Subscriber('/uav_state', UAV_state)
+          
 
         # filter messages based on time
         ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.005)

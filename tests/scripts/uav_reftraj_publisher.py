@@ -79,7 +79,7 @@ class Trajectory_Generator():
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe)
         # draw trajectory in plot
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
