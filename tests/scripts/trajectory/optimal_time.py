@@ -5,7 +5,7 @@ def compute_optimal_time(keyframe, waypoint, total_time):
     keyframe = np.transpose(keyframe)
 
     distance_array = np.array([])
-    epsilon = -1
+    epsilon = 20
     psi_array = np.array([])
     for i in range(0, waypoint-1):
         p_vector = np.array([keyframe[i+1][0]-keyframe[i][0], keyframe[i+1][1]-keyframe[i][1], keyframe[i+1][2]-keyframe[i][2]])
