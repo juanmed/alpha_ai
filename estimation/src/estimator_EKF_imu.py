@@ -232,7 +232,7 @@ class KalmanFilter():
         self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
         self.g = 0.0
 
-        self.rate = 100
+        self.rate = 200
         self.r = rospy.Rate(self.rate)
         self.dT = 1.0/self.rate
 
