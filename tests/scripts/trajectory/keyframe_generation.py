@@ -19,19 +19,15 @@ class KeyframeGeneration:
 
         # generate keyframe
         keyframe = np.array(current_pose)
-        print keyframe
         for i in range(0, gate_count):
             #print self.compute_pose(gate_location[i])
             keyframe = np.vstack((keyframe, self.compute_pose(gate_location[i])))
             # compensate gate direction
             if self.compensate_direction(keyframe[i+1], keyframe[i]):
-                print "%d gate" %(i+1)
                 if keyframe[i+1][3] <= 0:
                     keyframe[i+1][3] = keyframe[i+1][3] + 3.14
-                    print keyframe[i+1][3]
                 else:
                     keyframe[i+1][3] = keyframe[i+1][3] - 3.14
-                    print keyframe[i + 1][3]
 
         waypoint = np.size(keyframe)/4
         keyframe = np.reshape(keyframe, (waypoint, 4))
@@ -55,7 +51,6 @@ class KeyframeGeneration:
         v2 = p2-p1
         cp = np.cross(v1, v2)
 
-        print "cross product: %s" % np.arctan2(cp[1], cp[0])
         gate_psi = np.arctan2(cp[1], cp[0])
         gate_pose = np.array([gate_x, gate_y, gate_z, gate_psi])
 
