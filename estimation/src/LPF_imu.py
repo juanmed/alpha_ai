@@ -33,6 +33,10 @@ class LowPassFilter():
         self.x[4][0] = self.x[4][0]*(1-self.alpha_acc) + self.z[4][0]*self.alpha_acc
         self.x[5][0] = self.x[5][0]*(1-self.alpha_acc) + self.z[5][0]*self.alpha_acc
 
+        self.setState()
+        self.pub_angular_velocity.publish(self.angular_velocity)
+        self.pub_linear_acceleration.publish(self.linear_acceleration)
+
 
     def setState(self):
         self.angular_velocity.x = self.x[0][0]
@@ -40,7 +44,7 @@ class LowPassFilter():
         self.angular_velocity.z = self.x[2][0]
         self.linear_acceleration.x = self.x[3][0]
         self.linear_acceleration.y = self.x[4][0]
-        self.linear_acceleration.z = self.x[5][0] - self.g
+        self.linear_acceleration.z = self.x[5][0]
 
 
     def __init__(self):
@@ -53,8 +57,8 @@ class LowPassFilter():
         self.g = 9.81
         self.gyro_var = rospy.get_param('/uav/flightgoggles_imu/gyroscope_variance')
         self.accel_var = rospy.get_param('/uav/flightgoggles_imu/accelerometer_variance')
-        self.alpha_gyro = 0.05
-        self.alpha_acc = 0.01
+        self.alpha_gyro = 0.025
+        self.alpha_acc = 0.005
         
         self.x = np.zeros((6, 1))
         self.z = np.zeros((6, 1))
@@ -62,17 +66,13 @@ class LowPassFilter():
         rospy.Subscriber('/uav/sensors/imu', Imu, self.imu_cb)
         self.pub_angular_velocity = rospy.Publisher('/uav/angular_velocity', Vector3, queue_size=10)
         self.pub_linear_acceleration = rospy.Publisher('/uav/linear_acceleration', Vector3, queue_size=10)
+        self.past = rospy.Time.now()
 
         self.angular_velocity = Vector3()
         self.linear_acceleration = Vector3()
 
 
     def loop(self):
-        self.setState()
-
-        self.pub_angular_velocity.publish(self.angular_velocity)
-        self.pub_linear_acceleration.publish(self.linear_acceleration)
-
         self.r.sleep()
 
 

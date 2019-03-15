@@ -1,0 +1,10 @@
+<launch>
+    <!-- EKF node -->
+    <node name="estimator_EKF" pkg="estimation" type="estimator_EKF_imu.py" />
+
+    <!-- LPF node -->
+    <node name="LPF_imu" pkg="estimation" type="LPF_imu.py" />
+
+    <!-- IR detector node-->
+    <node name="gate_detector" pkg="estimation" type="gate_detector.py" />
+</launch>
