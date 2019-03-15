@@ -138,7 +138,7 @@ class GateDetector():
         self.velocity.x = (self.state.position.x - self.x_tmp) * self.rate
         self.velocity.y = (self.state.position.y - self.y_tmp) * self.rate
         self.velocity.z = (self.state.position.z - self.z_tmp) * self.rate
-        if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) > self.limit_acc:
+        if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) < self.limit_acc:
             self.pub_velocity.publish(self.velocity)
             print self.velocity
             self.velocity_tmp = self.velocity

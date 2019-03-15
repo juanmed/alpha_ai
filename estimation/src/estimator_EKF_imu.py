@@ -125,9 +125,9 @@ class KalmanFilter():
         ax_w = (ax_b*cos(theta)*cos(psi) + ay_b*(sin(pi)*sin(theta)*cos(psi)-cos(pi)*sin(psi)) + az_b*(cos(pi)*sin(theta)*cos(psi)+sin(pi)*sin(psi)))
         ay_w = (ax_b*cos(theta)*sin(psi) + ay_b*(sin(pi)*sin(theta)*sin(psi)+cos(pi)*cos(psi)) + az_b*(cos(pi)*sin(theta)*sin(psi)-sin(pi)*cos(psi)))
         az_w = (ax_b*(-sin(theta)) + ay_b*sin(pi)*cos(theta) + az_b*cos(pi)*cos(theta)) - self.g
-        self.acceleration_inertial.x = ax_w
-        self.acceleration_inertial.y = ay_w
-        self.acceleration_inertial.z = az_w
+        self.inertial_acceleration.x = ax_w
+        self.inertial_acceleration.y = ay_w
+        self.inertial_acceleration.z = az_w
         print ax_w, ay_w, az_w
 
         p_dot = (self.arm_length/sqrt(2)*U[1][0] + (self.Iyy-self.Izz)*q*r)/self.Ixx
@@ -323,14 +323,14 @@ class KalmanFilter():
         self.pub_attitude = rospy.Publisher('/uav/attitude', Vector3, queue_size=10)
         self.pub_linear_velocity = rospy.Publisher('/uav/linear_velocity', Vector3, queue_size=10)
         self.pub_attitude_vo = rospy.Publisher('/uav/attitude_vo', Vector3, queue_size=10)
-        self.pub_acceleration_inertial = rospy.Publisher('/uav/acceleration_inertial', Vector3, queue_size=10)
+        self.pub_inertial_acceleration = rospy.Publisher('/uav/inertial_acceleration', Vector3, queue_size=10)
 
         self.state = Odometry()
         self.position = Vector3()
         self.attitude = Vector3()
         self.linear_velocity = Vector3()
         self.attitude_vo = Vector3()
-        self.acceleration_inertial = Vector3()
+        self.inertial_acceleration = Vector3()
 
 
     def loop(self):
@@ -378,7 +378,7 @@ class KalmanFilter():
         self.pub_attitude.publish(self.attitude)
         self.pub_linear_velocity.publish(self.linear_velocity)
         self.pub_attitude_vo.publish(self.attitude_vo)
-        self.pub_acceleration_inertial.publish(self.acceleration_inertial)
+        self.pub_inertial_acceleration.publish(self.inertial_acceleration)
 
         self.vision_tf = False
         self.ir_pose_tf = False
