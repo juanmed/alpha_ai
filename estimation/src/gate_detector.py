@@ -35,6 +35,7 @@ class GateDetector():
             rvec, tvec = self.getPose(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)))
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
+            self.pub_attitude.publish(self.euler)
 
 
     def getID(self, landmarkID):
@@ -84,11 +85,20 @@ class GateDetector():
 
 
     def setState(self, rvec, tvec):
-        R = self.rodrigues2rotation(rvec).T
+        R = self.rodrigues2rotation(rvec)
         t = np.dot(-R, tvec)
         
-        (pi, theta, psi) = self.rotation2euler(R)
-        (qw, qx, qy, qz) = self.euler2quaternion(pi, theta, psi)
+        (pi, theta, psi) = self.rotation2euler(R.T)
+        while pi+np.pi/2 > np.pi:
+            pi = pi - 2*np.pi
+        while theta+np.pi*2 > np.pi:
+            theta = theta - 2*np.pi
+        while psi+np.pi/2 > np.pi:
+            psi = psi - 2*np.pi
+        pi_r = theta + np.pi*2
+        theta_r = -pi - np.pi/2
+        psi_r = psi + np.pi/2
+        (qw, qx, qy, qz) = self.euler2quaternion(pi_r, theta_r, psi_r)
 
         self.state.position.x = t[0][0]
         self.state.position.y = t[1][0]
@@ -97,6 +107,10 @@ class GateDetector():
         self.state.orientation.y = qy
         self.state.orientation.z = qz
         self.state.orientation.w = qw
+
+        self.euler.x = pi_r
+        self.euler.y = theta_r
+        self.euler.z = psi_r
 
 
     def __init__(self):
@@ -120,12 +134,14 @@ class GateDetector():
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
         self.pub_pose = rospy.Publisher('/uav/ir_pose', Pose, queue_size=10)
         self.pub_velocity = rospy.Publisher('/uav/ir_velocity', Vector3, queue_size=10)
+        self.pub_attitude = rospy.Publisher('/uav/ir_euler', Vector3, queue_size=10)
         self.state = Pose()
         self.state.position.x = self.init_pose[0]
         self.state.position.y = self.init_pose[1]
         self.state.position.z = self.init_pose[2]
         self.velocity = Vector3()
         self.velocity_tmp = Vector3()
+        self.euler = Vector3()
         self.x_tmp = self.init_pose[0]
         self.y_tmp = self.init_pose[1]
         self.z_tmp = self.init_pose[2]
@@ -140,7 +156,6 @@ class GateDetector():
         self.velocity.z = (self.state.position.z - self.z_tmp) * self.rate
         if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) < self.limit_acc:
             self.pub_velocity.publish(self.velocity)
-            print self.velocity
             self.velocity_tmp = self.velocity
 
         self.x_tmp = self.state.position.x
