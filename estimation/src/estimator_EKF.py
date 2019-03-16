@@ -17,6 +17,7 @@ class KalmanFilter():
         self.u[1][0] = input.M.y
         self.u[2][0] = input.M.x
         self.u[3][0] = input.M.z
+        self.g = 9.81
 
 
     def vision_cb(self, pose):
@@ -76,11 +77,11 @@ class KalmanFilter():
         ay_b = imu.linear_acceleration.y
         az_b = imu.linear_acceleration.z
 
-        theta_acc = asin(-ax_b/self.g)
-        pi_acc = atan2(ay_b, az_b)
+        #theta_acc = asin(-ax_b/self.g)
+        #pi_acc = atan2(ay_b, az_b)
 
-        #self.z[10][0] = pi_acc
-        #self.z[11][0] = theta_acc
+        #self.z[][0] = pi_acc
+        #self.z[][0] = theta_acc
 
 
     def getFB(self):
@@ -136,7 +137,7 @@ class KalmanFilter():
 
         ax = (sin(pi)*sin(psi)+cos(pi)*sin(theta)*cos(psi))*U[0][0]/self.mass - self.drag*vx
         ay = (-sin(pi)*cos(psi)+cos(pi)*sin(theta)*sin(psi))*U[0][0]/self.mass - self.drag*vy
-        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz# - self.g
+        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz - self.g
         p_dot = (self.arm_length/sqrt(2)*U[1][0] + (self.Iyy-self.Izz)*q*r)/self.Ixx
         q_dot = (self.arm_length/sqrt(2)*U[2][0] + (self.Izz-self.Ixx)*r*p)/self.Iyy
         r_dot = (self.k_torque/self.k_thrust*U[3][0] + (self.Ixx-self.Iyy)*p*q)/self.Izz
@@ -253,7 +254,7 @@ class KalmanFilter():
         self.k_thrust = rospy.get_param('/uav/flightgoggles_uav_dynamics/thrust_coefficient')
         self.k_torque = rospy.get_param('/uav/flightgoggles_uav_dynamics/torque_coefficient')
         self.drag = rospy.get_param('/uav/flightgoggles_uav_dynamics/drag_coefficient')
-        self.g = -9.81
+        self.g = 0
 
         self.gyro_var = rospy.get_param('/uav/flightgoggles_imu/gyroscope_variance')
         self.accel_var = rospy.get_param('/uav/flightgoggles_imu/accelerometer_variance')

@@ -310,8 +310,8 @@ class KalmanFilter():
         self.ir_velocity_tf = False
         self.ir_pose_tf = False
 
-        rospy.Subscriber('/uav/angular_velocity', Vector3, self.gyro_cb)
-        rospy.Subscriber('/uav/linear_acceleration', Vector3, self.accel_cb)
+        rospy.Subscriber('/uav/LPF/angular_velocity', Vector3, self.gyro_cb)
+        rospy.Subscriber('/uav/LPF/linear_acceleration', Vector3, self.accel_cb)
         rospy.Subscriber('/svo/pose_imu', PoseWithCovarianceStamped, self.vision_cb)
         rospy.Subscriber('/uav/ir_velocity', Vector3, self.ir_velocity_cb)
         rospy.Subscriber('/uav/ir_pose', Pose, self.ir_pose_cb)

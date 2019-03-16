@@ -58,14 +58,14 @@ class LowPassFilter():
         self.gyro_var = rospy.get_param('/uav/flightgoggles_imu/gyroscope_variance')
         self.accel_var = rospy.get_param('/uav/flightgoggles_imu/accelerometer_variance')
         self.alpha_gyro = 0.025
-        self.alpha_acc = 0.005
+        self.alpha_acc = 0.01
         
         self.x = np.zeros((6, 1))
         self.z = np.zeros((6, 1))
 
         rospy.Subscriber('/uav/sensors/imu', Imu, self.imu_cb)
-        self.pub_angular_velocity = rospy.Publisher('/uav/angular_velocity', Vector3, queue_size=10)
-        self.pub_linear_acceleration = rospy.Publisher('/uav/linear_acceleration', Vector3, queue_size=10)
+        self.pub_angular_velocity = rospy.Publisher('/uav/LPF/angular_velocity', Vector3, queue_size=10)
+        self.pub_linear_acceleration = rospy.Publisher('/uav/LPF/linear_acceleration', Vector3, queue_size=10)
         self.past = rospy.Time.now()
 
         self.angular_velocity = Vector3()
