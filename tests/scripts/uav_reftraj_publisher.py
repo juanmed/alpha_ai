@@ -73,15 +73,16 @@ class Trajectory_Generator():
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
 
-        self.total_time = 40
+        self.total_time = 10
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
-        self.t = [0, 1, 1.5, 2, 3, 3.5, 4, 5, 5.5, 6, 8, 9, 10]
+        #self.t = [0, 2, 2.5, 3, 4, 4.5, 5, 6, 6.5, 7, 8, 9, 10]
+        #self.t = np.array(self.t) * 40
         print self.t
 
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe)
         # draw trajectory in plot
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()

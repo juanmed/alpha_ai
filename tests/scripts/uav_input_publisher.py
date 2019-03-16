@@ -500,8 +500,8 @@ class uav_Input_Publisher():
                 #print("**Loops: {}".format(self.loops))
 
 
-        print("Position Error: {}".format(np.linalg.norm(self.pos_err)))
-        print("T computed: {}".format(self.T))
+        #print("Position Error: {}".format(np.linalg.norm(self.pos_err)))
+        #print("T computed: {}".format(self.T))
 
         # ******************************************#
         #        ORIENTATION CONTROL LOOP
@@ -552,9 +552,9 @@ class uav_Input_Publisher():
         rt_msg.header.stamp = rospy.Time.now()
         rt_msg.header.frame_id = 'uav/imu'
 
-        rt_msg.angular_rates.x = self.w_b_des[0][0] + w_b_in[0][0] #- p_r #traj_msg.twist.angular.x
-        rt_msg.angular_rates.y = self.w_b_des[1][0] + w_b_in[1][0] #- q_r  #traj_msg.twist.angular.y
-        rt_msg.angular_rates.z = self.w_b_des[2][0] + w_b_in[2][0] #- r_r #traj_msg.twist.angular.z
+        rt_msg.angular_rates.x = 1.0*self.w_b_des[0][0] + 0.0*w_b_in[0][0] #- p_r #traj_msg.twist.angular.x
+        rt_msg.angular_rates.y = 1.0*self.w_b_des[1][0] + 0.0*w_b_in[1][0] #- q_r  #traj_msg.twist.angular.y
+        rt_msg.angular_rates.z = 1.0*self.w_b_des[2][0] + 0.0*w_b_in[2][0] #- r_r #traj_msg.twist.angular.z
 
 
 
@@ -565,9 +565,9 @@ class uav_Input_Publisher():
         # Define orientation tracking error
         or_e = 0.5*self.vex( (np.dot(self.Rbw_des.T,Rbw) - np.dot(Rbw.T,self.Rbw_des)) )
 
-        #rt_msg.angular_rates.x = 1.0*self.w_b_des[0][0] + 1.0*self.w_fb[0][0] #- p
-        #rt_msg.angular_rates.y = 1.0*self.w_b_des[1][0] + 1.0*self.w_fb[1][0] #- q
-        #rt_msg.angular_rates.z = 1.0*self.w_b_des[2][0] + 1.0*self.w_fb[2][0] #- r
+        #rt_msg.angular_rates.x = 1.0*self.w_b_des[0][0] + (1.0*self.w_fb[0][0] - p)
+        #rt_msg.angular_rates.y = 1.0*self.w_b_des[1][0] + (1.0*self.w_fb[1][0] - q)
+        #rt_msg.angular_rates.z = 1.0*self.w_b_des[2][0] + (1.0*self.w_fb[2][0] - r)
 
 
 
