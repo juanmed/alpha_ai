@@ -317,10 +317,10 @@ class KalmanFilter():
         rospy.Subscriber('/uav/ir_pose', Pose, self.ir_pose_cb)
         rospy.Subscriber('/uav/sensors/downward_laser_rangefinder', Range, self.range_cb)
 
-        self.pub_state = rospy.Publisher('/uav/state', UAV_state, queue_size=10)
-        self.pub_position = rospy.Publisher('/uav/position', Vector3, queue_size=10)
-        self.pub_attitude = rospy.Publisher('/uav/attitude', Vector3, queue_size=10)
-        self.pub_linear_velocity = rospy.Publisher('/uav/linear_velocity', Vector3, queue_size=10)
+        self.pub_state = rospy.Publisher('/uav/est/state', UAV_state, queue_size=10)
+        self.pub_position = rospy.Publisher('/uav/est/position', Vector3, queue_size=10)
+        self.pub_attitude = rospy.Publisher('/uav/est/attitude', Vector3, queue_size=10)
+        self.pub_linear_velocity = rospy.Publisher('/uav/est/linear_velocity', Vector3, queue_size=10)
         self.pub_attitude_vo = rospy.Publisher('/uav/attitude_vo', Vector3, queue_size=10)
         self.pub_inertial_acceleration = rospy.Publisher('/uav/inertial_acceleration', Vector3, queue_size=10)
 

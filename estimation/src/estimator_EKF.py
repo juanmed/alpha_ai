@@ -6,7 +6,7 @@ from numpy.linalg import inv, multi_dot
 from scipy.signal import cont2discrete
 from math import sin, cos, tan, asin, acos, atan2, sqrt
 
-from geometry_msgs.msg import PoseWithCovarianceStamped, Vector3
+from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Vector3
 from sensor_msgs.msg import Imu, Range
 from tests.msg import UAV_input, UAV_state
 
@@ -136,7 +136,7 @@ class KalmanFilter():
 
         ax = (sin(pi)*sin(psi)+cos(pi)*sin(theta)*cos(psi))*U[0][0]/self.mass - self.drag*vx
         ay = (-sin(pi)*cos(psi)+cos(pi)*sin(theta)*sin(psi))*U[0][0]/self.mass - self.drag*vy
-        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz - self.g
+        az = cos(pi)*cos(theta)*U[0][0]/self.mass - self.drag*vz# - self.g
         p_dot = (self.arm_length/sqrt(2)*U[1][0] + (self.Iyy-self.Izz)*q*r)/self.Ixx
         q_dot = (self.arm_length/sqrt(2)*U[2][0] + (self.Izz-self.Ixx)*r*p)/self.Iyy
         r_dot = (self.k_torque/self.k_thrust*U[3][0] + (self.Ixx-self.Iyy)*p*q)/self.Izz
@@ -345,11 +345,11 @@ class KalmanFilter():
         rospy.Subscriber('/uav/sensors/imu', Imu, self.imu_cb)
         rospy.Subscriber('/uav/sensors/downward_laser_rangefinder', Range, self.range_cb)
         
-        self.pub_state = rospy.Publisher('/uav/state', Odometry, queue_size=10)
-        self.pub_position = rospy.Publisher('/uav/position', Vector3, queue_size=10)
-        self.pub_attitude = rospy.Publisher('/uav/attitude', Vector3, queue_size=10)
-        self.pub_linear_velocity = rospy.Publisher('/uav/linear_velocity', Vector3, queue_size=10)
-        self.pub_angular_velocity = rospy.Publisher('/uav/angular_velocity', Vector3, queue_size=10)
+        self.pub_state = rospy.Publisher('/uav/est/state', UAV_state, queue_size=10)
+        self.pub_position = rospy.Publisher('/uav/est/position', Vector3, queue_size=10)
+        self.pub_attitude = rospy.Publisher('/uav/est/attitude', Vector3, queue_size=10)
+        self.pub_linear_velocity = rospy.Publisher('/uav/est/linear_velocity', Vector3, queue_size=10)
+        self.pub_angular_velocity = rospy.Publisher('/uav/est/angular_velocity', Vector3, queue_size=10)
 
         self.state = UAV_state()
         self.position = Vector3()
@@ -382,16 +382,17 @@ class KalmanFilter():
                 self.K = multi_dot([self.P_pre, self.H[6:, :].T, inv(multi_dot([self.H[6:, :], self.P_pre, self.H[6:, :].T]) + self.R[6:, 6:])])
                 self.hx = self.gethx(self.x_pre)
                 self.x_est = self.x_pre + np.dot(self.K, self.z[6:, :] - self.hx[6:, :])
-                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[6:, :]), self.P_pre)
-                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[6:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[6:, :])).T]) + multi_dot([self.K, self.R[6:, 6:], self.K.T])
+                #self.P_est = np.dot(np.eye(12)-np.dot(self.K, self.H[6:, :]), self.P_pre)
+                self.P_est = multi_dot([np.eye(12)-np.dot(self.K, self.H[6:, :]), self.P_pre, (np.eye(12)-np.dot(self.K, self.H[6:, :])).T]) + multi_dot([self.K, self.R[6:, 6:], self.K.T])
             else:
                 print 'no VO, no velocity'
                 self.K = multi_dot([self.P_pre, self.H[9:, :].T, inv(multi_dot([self.H[9:, :], self.P_pre, self.H[9:, :].T]) + self.R[9:, 9:])])
                 self.hx = self.gethx(self.x_pre)
                 self.x_est = self.x_pre + np.dot(self.K, self.z[9:, :] - self.hx[9:, :])
-                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre)
-                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
+                #self.P_est = np.dot(np.eye(12)-np.dot(self.K, self.H[9:, :]), self.P_pre)
+                self.P_est = multi_dot([np.eye(12)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(12)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
         else:
+            print 'no VO, no IR'
             self.K = multi_dot([self.P_pre, self.H[12:, :].T, inv(multi_dot([self.H[12:, :], self.P_pre, self.H[12:, :].T]) + self.R[12:, 12:])])
             self.hx = self.gethx(self.x_pre)
             self.x_est = self.x_pre + np.dot(self.K, self.z[12:, :] - self.hx[12:, :])
