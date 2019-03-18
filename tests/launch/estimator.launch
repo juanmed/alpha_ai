@@ -1,0 +1,17 @@
+<launch>
+
+	    <!-- True State Node -->
+		<node pkg="tests" name="uav_posestamped_publisher" type="uav_poseStamped_publisher.py"/>
+		<node pkg="tests" name="uav_state_publisher" type="uav_state_publisher.py"/>
+			   
+	    <!-- EKF Node -->
+	    <node name="estimator_EKF" pkg="estimation" type="estimator_EKF_imu.py" />
+
+	    <!-- LPF Node -->
+	    <node name="LPF_imu" pkg="estimation" type="LPF_imu.py" />
+
+	    <!-- IR Detector Node-->
+	    <node name="gate_detector" pkg="estimation" type="gate_detector.py" />
+
+	    <node pkg="rqt_plot" name="rqt_plot" type="rqt_plot"/>
+</launch>

@@ -12,7 +12,7 @@ from tests.msg import UAV_state
 
 
 class KalmanFilter():
-    def quat2euler(self, qw, qx, qy, qz):
+    def quat2euler(self, w, x, y, z):
         pi = atan2(2*(w*x+y*z), 1-2*(pow(x, 2)+pow(y, 2)))
         theta = asin(2*(w*y-z*x))
         psi = atan2(2*(w*z+x*y), 1-2*(pow(y, 2)+pow(z, 2)))
