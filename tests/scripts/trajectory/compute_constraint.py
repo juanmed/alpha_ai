@@ -4,15 +4,15 @@ from cvxopt import matrix
 
 # TODO : velocity and acceleration constraint after update.
 class ComputeConstraint:
-    def __init__(self, order, m, k_r, k_psi, t, key_frame, corridor_position=0, n_intermediate=0, corridor_width=0):
-
-        # k_r, k_psi = set continuity count ( jerk ? or snap? )
+    def __init__(self, order, m, k_r, k_psi, t, key_frame, current_state, corridor_position=0, n_intermediate=0, corridor_width=0):
+        # k_r, k_psi = set continuity iteration
         self.order = order
         self.m = m
         self.k_r = k_r
         self.k_psi = k_psi
         self.t = t
         self.keyframe = key_frame
+        self.current_state = current_state
         self.corridor_position = corridor_position
         self.n_intermediate = n_intermediate
         self.corridor_width = corridor_width
@@ -128,7 +128,7 @@ class ComputeConstraint:
                         else:
                             a[i*(self.order+1)*self.n + k * (self.order + 1): i * (self.order + 1) * self.n + k * (self.order + 1) + self.order + 1] = values
                             A2[k + h*(self.n-1), :] = a
-                            b2[k + h*(self.n-1)] = constraint_data_r[i, h]
+                            b2[k + h*(self.n-1)] = self.current_state[h+1][k]        # constraint_data_r[i, h]
 
 
                     #Final
@@ -220,7 +220,7 @@ class ComputeConstraint:
                         else:
                             a[i * (self.order + 1) * self.n + (k + 3) * (self.order + 1): i * (self.order + 1) * self.n + (k + 3) * (self.order + 1) + self.order + 1] = values
                             A3[k + h * 1, :] = a
-                            b3[k + h * 1] = constraint_data_psi[i, h]
+                            b3[k + h * 1] = self.current_state[h+1][k+3]                  #constraint_data_psi[i, h]
 
                     # Final
                     values = np.zeros(self.order + 1)
