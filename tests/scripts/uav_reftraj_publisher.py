@@ -50,8 +50,6 @@ class Trajectory_Generator():
             # set time interval depending on distance between gate
             self.t = 2 * np.array([0, 1, 2, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7.5, 8.5])
 
-        self.passed_gate = 0
-
         self.gate_location_cls = get_gate_location.GateLocation()
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
 
@@ -69,6 +67,7 @@ class Trajectory_Generator():
             is_quaternion = False
             self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
 
+        # for counting gates
         self.gates = []
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
@@ -79,10 +78,21 @@ class Trajectory_Generator():
         #self.t = np.array(self.t) * 40
         print self.t
 
+        # current state(pos, vel, acc, jerk, snap)
+        self.current_pos = np.array([0, 0, 0, 0])  # x y z psi
+        self.current_vel = np.array([0, 0, 0, 0])  # for now in our system, we can only get velocity from estimation
+        self.current_acc = np.array([0, 0, 0, 0])
+        self.current_jerk = np.array([0, 0, 0, 0])
+        self.current_snap = np.array([0, 0, 0, 0])
+        self.current_state = np.vstack((self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
+
         # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe)
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe, self.current_state)
         # draw trajectory in plot
         #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+
+        # for counting gate
+        self.passed_gate = 0
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -109,6 +119,14 @@ class Trajectory_Generator():
 
         return ref_trajectory
 
+    def current_state_update(self, current_pos, current_vel, current_acc, current_jerk, current_snap):
+        self.current_pos = np.array(current_pos)
+        self.current_vel = np.array(current_vel)
+        self.current_acc = np.array(current_acc)
+        self.current_jerk = np.array(current_jerk)
+        self.current_snap = np.array(current_snap)
+        self.current_state = np.vstack((self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
+
     # checking whether drone pass gate or not
     # It needs current position of drone.
     def check_gate(self, current_position):
@@ -118,20 +136,21 @@ class Trajectory_Generator():
 
     # keyframe and trajectory update
     # It needs current position of drone.
-    def trajectory_update(self, current_pose, pass_time):
+    # Also need current vel, acc, jerk, snap from flatout trajectory
+    def trajectory_update(self, pass_time):
         # delete previous pose and gate location which was passed before.
-        for i in range(0, self.passed_gate + 1):
+        # delete 3 * gate because we add before and after gate.
+        for i in range(0, 3 * self.passed_gate + 1):
             self.keyframe = np.delete(self.keyframe, 0, axis=0)
 
         # add current pose at keyframe
-        current_pose = np.array([current_pose])
-        self.keyframe = np.append(current_pose, self.keyframe)
+        self.keyframe = np.vstack((self.current_state[0], self.keyframe))
 
         # update time
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count - self.passed_gate, self.total_time - pass_time)
 
         # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count - self.passed_gate, self.t, self.keyframe)
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count - self.passed_gate, self.t, self.keyframe, self.current_state)
 
 
 class Trajectory_Generator_Test():
