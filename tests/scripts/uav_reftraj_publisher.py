@@ -46,6 +46,7 @@ class Trajectory_Generator():
         else:
             self.gate_count = 11
             self.init_pose = np.array([0.0, 0.0, 1.0, 0.0])
+            self.init_pose = parameter.init_pose
             # this is for trajectory with full gate ( maybe final test3 )
             # set time interval depending on distance between gate
             self.t = 2 * np.array([0, 1, 2, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7.5, 8.5])
@@ -73,16 +74,20 @@ class Trajectory_Generator():
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
 
-        self.total_time = 20
+        self.total_time = 120
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
-        #self.t = [0, 2, 2.5, 3, 4, 4.5, 5, 6, 6.5, 7, 8, 9, 10]
+        self.t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
         #self.t = np.array(self.t) * 40
+        #self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8, 
+        #            5.0, 5.05, 5.1, 5.3, 5.35, 5.4, 5.6, 5.65, 5.7, 5.9, 5.95, 6, 6.3, 6.35, 6.4,
+        #             6.7, 6.75, 8]
+        self.t = np.array(self.t) * 9 
         print self.t
 
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe)
         # draw trajectory in plot
-        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
 
         # initialize time
         self.init_time = rospy.get_time()
@@ -214,7 +219,7 @@ class Trajectory_Generator2():
 
 
     def compute_reference_traj(self, time):
-        vel = 3
+        vel = 4
         trajectory_time = time - self.start_time
         #print("Time traj: {}".format(trajectory_time))
         flatout_trajectory = trajGen3D.generate_trajectory(trajectory_time, vel, self.waypoints, self.coeff_x, self.coeff_y, self.coeff_z)

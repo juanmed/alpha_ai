@@ -48,7 +48,7 @@ class uav_Input_Publisher():
 
         # filter messages based on time
         ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.005)
-        ts.registerCallback(self.geometric_controller)
+        ts.registerCallback(self.pid_controller)
 
         self.m = rospy.get_param("/uav/flightgoggles_uav_dynamics/vehicle_mass")
 
@@ -106,7 +106,6 @@ class uav_Input_Publisher():
 
         # Angular velocity control feedback gain
         self.Kw = np.diag([1.0,1.0,1.0])
-
 
     def callback(self, state_msg, traj_msg):
  
@@ -432,9 +431,9 @@ class uav_Input_Publisher():
             v = np.array([[vx],[vy],[vz]])
             v_ref = np.array([[vx_r],[vy_r],[vz_r]])
 
-            Kp = np.diag([lqrg.Kp2, lqrg.Kp2, lqrg.Kp2])
-            Kd = np.diag([lqrg.Kd2, lqrg.Kd2, lqrg.Kd2])
-            Ki = np.diag([lqrg.Ki2, lqrg.Ki2, lqrg.Ki2])
+            Kp = np.diag([lqrg.Kpx2, lqrg.Kpy2, lqrg.Kpz2])
+            Kd = np.diag([lqrg.Kdx2, lqrg.Kdy2, lqrg.Kdz2])
+            Ki = np.diag([lqrg.Kix2, lqrg.Kiy2, lqrg.Kiz2])
 
             self.pos_err = self.pos_err + (pos - pos_ref)
             ua_e = -1.0*np.dot(Kp,pos-pos_ref) -1.0*np.dot(Kd,v-v_ref) -1.0*np.dot(Ki,self.pos_err)  # PID control law
@@ -556,9 +555,9 @@ class uav_Input_Publisher():
         rt_msg.header.stamp = rospy.Time.now()
         rt_msg.header.frame_id = 'uav/imu'
 
-        rt_msg.angular_rates.x = 0.0*self.w_b_des[0][0] + 1.0*w_b_in[0][0] #- p_r #traj_msg.twist.angular.x
-        rt_msg.angular_rates.y = 0.0*self.w_b_des[1][0] + 1.0*w_b_in[1][0] #- q_r  #traj_msg.twist.angular.y
-        rt_msg.angular_rates.z = 0.0*self.w_b_des[2][0] + 1.0*w_b_in[2][0] #- r_r #traj_msg.twist.angular.z
+        rt_msg.angular_rates.x = 1.0*self.w_b_des[0][0] + 1.0*w_b_in[0][0] #- p_r #traj_msg.twist.angular.x
+        rt_msg.angular_rates.y = 1.0*self.w_b_des[1][0] + 1.0*w_b_in[1][0] #- q_r  #traj_msg.twist.angular.y
+        rt_msg.angular_rates.z = 1.0*self.w_b_des[2][0] + 1.0*w_b_in[2][0] #- r_r #traj_msg.twist.angular.z
 
 
 
@@ -725,8 +724,8 @@ class uav_Input_Publisher():
         self.input_publisher.publish(rt_msg)
         rospy.loginfo(rt_msg)         
 
-
-    #
+    # Velocidad angular deseada utilizando
+    # controlador  disenado por Fernando
     def get_wdes_1(self, Rbw, Rbw_des, w_b_des, Kw):
         # Calculate rotation error
         Re = np.dot(Rbw_des.T, Rbw)
@@ -735,6 +734,7 @@ class uav_Input_Publisher():
         #print("* wb hat \n{}".format(w_b_in_hat))
         return self.vex(w_b_in_hat)
 
+    # Desired angular velocity 
     def get_wdes_2(self, Rbw, Rbw_des, Katt):
         """
         Following Faessler, M., Fontana, F., Forster, C., & Scaramuzza, D. (2015). 
@@ -798,15 +798,6 @@ class uav_Input_Publisher():
         print("r_des2: {}".format(r_des2))
 
         return np.array([[p_des],[q_des],[r_des2]])
-
-
-
-
-
-
-
-
-
 
     # saturation function for scalars
     def clip_scalar(self, value, max_value):
