@@ -30,7 +30,7 @@ class uav_Input_Publisher():
         self.reftraj_sub = message_filters.Subscriber('/uav_ref_trajectory', UAV_traj)
 
         # Switch between modes
-        self.mode = 1   # 1: use true state,  2: use estimated state
+        self.mode = 2   # 1: use true state,  2: use estimated state
         if( self.mode == 1):
 
             # create message message_filter
@@ -48,7 +48,7 @@ class uav_Input_Publisher():
 
         # filter messages based on time
         ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.005)
-        ts.registerCallback(self.geometric_controller)
+        ts.registerCallback(self.pid_controller)
 
         self.m = rospy.get_param("/uav/flightgoggles_uav_dynamics/vehicle_mass")
 
