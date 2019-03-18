@@ -2,8 +2,6 @@ import numpy as np
 
 
 def compute_optimal_time(keyframe, waypoint, total_time):
-    keyframe = np.transpose(keyframe)
-
     distance_array = np.array([])
     epsilon = 20
     psi_array = np.array([])
@@ -29,5 +27,4 @@ def compute_optimal_time(keyframe, waypoint, total_time):
         ratio = (distance_sum + psi_sum * epsilon) / (full_distance + full_psi * epsilon)
         time = ratio * total_time
         t = np.append(t, time)
-    print t
     return t

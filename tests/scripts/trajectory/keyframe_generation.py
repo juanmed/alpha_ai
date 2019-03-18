@@ -25,7 +25,6 @@ class KeyframeGeneration:
 
         waypoint = np.size(self.keyframe)/4
         keyframe = np.reshape(self.keyframe, (waypoint, 4))
-        keyframe = np.transpose(keyframe)
 
         # include initial position
         return keyframe, waypoint

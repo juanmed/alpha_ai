@@ -69,6 +69,7 @@ class Trajectory_Generator():
             is_quaternion = False
             self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
 
+        # for counting gates
         self.gates = []
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
@@ -125,7 +126,7 @@ class Trajectory_Generator():
 
         # add current pose at keyframe
         current_pose = np.array([current_pose])
-        self.keyframe = np.append(current_pose, self.keyframe)
+        self.keyframe = np.vstack((current_pose, self.keyframe))
 
         # update time
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count - self.passed_gate, self.total_time - pass_time)

@@ -6,6 +6,9 @@ import numpy as np
 
 
 def qp_solution(order, n, waypoint, t, keyframe):
+    # change format of keyframe
+    keyframe = np.transpose(keyframe)
+
     # compute P, q, A, b
     compute_p_cls = compute_p.ComputeP(order, waypoint-1, 1, 1, 4, 2, t)
     P = compute_p_cls.compute_p()
@@ -21,15 +24,15 @@ def qp_solution(order, n, waypoint, t, keyframe):
 
     # check A,b and rank of A
 
-    print np.size(A)
-    # print np.size(b)
-    print np.linalg.matrix_rank(A)
+    #print np.size(A)
+    #print np.linalg.matrix_rank(A)
+    #print np.size(b)
 
     # save A, b, x as csv file
 
-    np.savetxt("A.csv", A, delimiter=",")
-    np.savetxt("b.csv", b, delimiter=",")
-    # np.savetxt("x.csv", sol_x, delimiter=",")
+    #np.savetxt("A.csv", A, delimiter=",")
+    #np.savetxt("b.csv", b, delimiter=",")
+    #np.savetxt("x.csv", sol_x, delimiter=",")
 
     return sol_x
 
