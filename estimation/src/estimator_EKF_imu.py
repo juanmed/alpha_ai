@@ -78,7 +78,10 @@ class KalmanFilter():
     def range_cb(self, rangefinder):
         pi = self.x_est[3][0]
         theta = self.x_est[4][0]
-        self.z[15][0] = (-rangefinder.range) * abs(cos(pi)*cos(theta))
+        h = (-rangefinder.range) * abs(cos(pi)*cos(theta))
+        if self.ir_pose_tf is True:
+            self.offset = self.x_est[2][0] - h
+        self.z[15][0] = h + self.offset
         self.R[15][15] = self.range_var * abs(cos(pi)*cos(theta))
 
 
@@ -136,7 +139,6 @@ class KalmanFilter():
         self.inertial_acceleration.x = ax_w
         self.inertial_acceleration.y = ay_w
         self.inertial_acceleration.z = az_w
-        print ax_w, ay_w, az_w
 
         p_dot = (self.arm_length/sqrt(2)*U[1][0] + (self.Iyy-self.Izz)*q*r)/self.Ixx
         q_dot = (self.arm_length/sqrt(2)*U[2][0] + (self.Izz-self.Ixx)*r*p)/self.Iyy
@@ -249,6 +251,7 @@ class KalmanFilter():
         self.range_var = rospy.get_param('/uav/flightgoggles_laser/rangefinder_variance')
         self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
         self.g = 0.0
+        self.offset = 0.0
 
         self.rate = 200
         self.r = rospy.Rate(self.rate)
