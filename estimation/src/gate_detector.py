@@ -34,7 +34,7 @@ class GateDetector():
                 next_cnt += 1
         print "Next gate: ", self.next_gate, next_cnt
         '''
-        if self.next_cnt == 4:
+        if next_cnt == 4:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
             for i in range(0, 4):
