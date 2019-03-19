@@ -4,7 +4,7 @@ from cvxopt import matrix
 
 # TODO : velocity and acceleration constraint after update.
 class ComputeConstraint:
-    def __init__(self, order, m, k_r, k_psi, t, key_frame, current_state, corridor_position=0, n_intermediate=0, corridor_width=0):
+    def __init__(self, order, m, k_r, k_psi, t, key_frame, current_state):
         # k_r, k_psi = set continuity iteration
         self.order = order
         self.m = m
@@ -13,9 +13,6 @@ class ComputeConstraint:
         self.t = t
         self.keyframe = key_frame
         self.current_state = current_state
-        self.corridor_position = corridor_position
-        self.n_intermediate = n_intermediate
-        self.corridor_width = corridor_width
         self.n = 4
 
     def constraint_data(self):
@@ -302,8 +299,65 @@ class ComputeConstraint:
 
         return A, b
 
-    def compute_cr_constraint(self):
-        return
+    def compute_in(self, max_vel, max_acc, max_agular_vel, max_angular_acc):
+        # constraint for maximum, minimum velocity
+        G1 = np.zeros((2 * self.m * (self.n) * 2 * 2, self.n * (self.order + 1) * self.m))
+        h1 = np.ones((2 * self.m * (self.n) * 2 * 2, 1))
+
+        compute_mat = np.eye(self.order + 1)
+
+        # vel, acc constraint
+        for i in range(0, self.m):
+            # velocity and acceleration
+            for h in range(0, 2):
+                values = np.zeros(self.order + 1)
+                for j in range(0, self.order + 1):
+                    tempCoeffs = compute_mat[j, :]
+                    for k in range(0, h + 1):
+                        tempCoeffs = np.polyder(tempCoeffs)
+                    values[j] = np.polyval(tempCoeffs, self.t[i])
+                for k in range(0, self.n - 1):
+                    g = np.zeros(self.n * (self.order + 1) * self.m)
+                    g[i * (self.order + 1) * self.n + k * (self.order + 1): i * (self.order + 1) * self.n + k * (self.order + 1) + self.order + 1] = values
+                    G1[2 * (k + h*(self.n-1) + i*(self.n-1)*2), :] = g
+                    G1[2 * (k + h*(self.n-1) + i*(self.n-1)*2) + 1, :] = -g
+                    if h == 0:
+                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2)] = max_vel
+                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2) + 1] = -max_vel
+                    elif h == 1:
+                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2)] = max_acc
+                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2) + 1] = -max_acc
+
+                values = np.zeros(self.order + 1)
+                for j in range(0, self.order + 1):
+                    tempCoeffs = compute_mat[j, :]
+                    for k in range(0, h + 1):
+                        tempCoeffs = np.polyder(tempCoeffs)
+                    values[j] = np.polyval(tempCoeffs, self.t[i+1])
+                for k in range(0, self.n - 1):
+                    g = np.zeros(self.n * (self.order + 1) * self.m)
+                    g[i * (self.order + 1) * self.n + k * (self.order + 1): i * (self.order + 1) * self.n + k * (self.order + 1) + self.order + 1] = values
+                    G1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2), :] = g
+                    G1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2) + 1, :] = -g
+                    if h == 0:
+                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2)] = max_vel
+                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2) + 1] = -max_vel
+                    elif h == 1:
+                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2)] = max_acc
+                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2) + 1] = -max_acc
+
+
+        G1 = matrix(G1)
+        h1 = matrix(h1)
+        return G1, h1
+
+    def compute_cr(self, corridor_position, n_intermediate, corridor_width):
+        self.corridor_position = corridor_position
+        self.n_intermediate = n_intermediate
+        self.corridor_width = corridor_width
+
+        if corridor_position is None:
+         return None, None
 
 
 

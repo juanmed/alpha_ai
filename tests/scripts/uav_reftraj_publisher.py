@@ -20,7 +20,6 @@ import trajectory.trajgen2_helper as trajGen3D
 import trajectory.get_gate_location as get_gate_location
 import trajectory.optimal_time as optimal_time
 import trajectory.gate_event as gate_event
-import matplotlib.pyplot as plt
 
 
 class Trajectory_Generator():
@@ -28,7 +27,7 @@ class Trajectory_Generator():
     def __init__(self):
 
         # choose one : level course or full course?
-        self.level = True
+        self.level = False
 
         # init parameters
         self.order = 10
@@ -75,8 +74,9 @@ class Trajectory_Generator():
         self.total_time = 20
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
         #self.t = [0, 2, 2.5, 3, 4, 4.5, 5, 6, 6.5, 7, 8, 9, 10]
+        self.t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        #self.t = [0, 1, 2, 3, 4]
         #self.t = np.array(self.t) * 40
-        print self.t
 
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = np.array([0, 0, 0, 0])  # x y z psi
@@ -89,7 +89,7 @@ class Trajectory_Generator():
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe, self.current_state)
         # draw trajectory in plot
-        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
 
         # for counting gate
         self.passed_gate = 0
@@ -134,6 +134,7 @@ class Trajectory_Generator():
             self.passed_gate = self.passed_gate + 1
             print "pass %d gate" % self.passed_gate
 
+
     # keyframe and trajectory update
     # It needs current position of drone.
     # Also need current vel, acc, jerk, snap from flatout trajectory
@@ -147,10 +148,10 @@ class Trajectory_Generator():
         self.keyframe = np.vstack((self.current_state[0], self.keyframe))
 
         # update time
-        self.t = optimal_time.compute_optimal_time(self.keyframe, self.gate_count - self.passed_gate, self.total_time - pass_time)
+        self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint - self.passed_gate, self.total_time - pass_time)
 
         # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.gate_count - self.passed_gate, self.t, self.keyframe, self.current_state)
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint - self.passed_gate, self.t, self.keyframe, self.current_state)
 
 
 class Trajectory_Generator_Test():
@@ -293,7 +294,6 @@ def pub_traj():
 
     # create topic for publishing ref trajectory
     traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size = 10)
-    input_publisher = rospy.Publisher('uav_input', UAV_input, queue_size = 10)
 
     # init node
     # rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
@@ -391,31 +391,8 @@ def pub_traj():
 
             traj.rot = Rbw
 
-            #input.T = u_1
-            #input.M.x = u_xx
-            #input.M.y = u_xy
-            #input.M.z = u_xz
-
-            """
-            x_line = np.append(x_line, x)
-            y_line = np.append(y_line, y)
-            z_line = np.append(z_line, z)
-
-            
-            fig = plt.figure(2)
-            ax = fig.add_subplot(111, projection='3d')
-            ax.plot(x_line, y_line, z_line, '.', color='b')
-            ax.set_xlim(-60, 60)
-            ax.set_ylim(-60, 60)
-            ax.set_zlim(-60, 60)
-            ax.set_xlabel('x label')
-            ax.set_ylabel('y label')
-            ax.set_zlabel('z label')
-            """
             # publish message
             traj_publisher.publish(traj)
-
-            #input_publisher.publish(input)
             rospy.loginfo(traj)
             rate.sleep()
 

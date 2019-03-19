@@ -35,7 +35,6 @@ def draw_trajectory(solution, order, waypoint, n, t, keyframe):
     ax.set_xlabel('x axis')
     ax.set_ylabel('y axis')
     ax.set_zlabel('z axis')
-    keyframe = np.transpose(keyframe)
     for i in range(0, len(keyframe)):
         ax.text(keyframe[i][0], keyframe[i][1], keyframe[i][2], i, color='red')
 

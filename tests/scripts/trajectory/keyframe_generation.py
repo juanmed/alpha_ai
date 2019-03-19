@@ -44,16 +44,13 @@ class KeyframeGeneration:
         v2 = p2-p1
         cp = np.cross(v1, v2)
         gate_psi = np.arctan2(cp[1], cp[0])
-
-        print "hi"
         gate_pose = np.array([gate_x, gate_y, gate_z, gate_psi])
         # compensate gate direction
         if self.compensate_direction(gate_pose):
             cp = -cp
             gate_psi = np.arctan2(cp[1], cp[0])
             gate_pose[3] = gate_psi
-            print cp
-        gate_pose = self.add_waypoint(gate_pose, cp)
+        #gate_pose = self.add_waypoint(gate_pose, cp)
         return gate_pose
 
     # add before and after waypoint at certain gate
