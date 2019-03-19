@@ -154,16 +154,24 @@ D_ = np.matrix([0.0])
 
 # PID Gains for 2nd order system  with transfer function
 #    H(s) = 1 / s**2
-Kp2 = 3.0
-Ki2 = 0.0
-Kd2 = 3.0
+Kpx2 = 3.0
+Kix2 = 0.5
+Kdx2 = 3.0
+
+Kpy2 = 3.0
+Kiy2 = 0.5
+Kdy2 = 3.0
+
+Kpz2 = 3.0
+Kiz2 = 1.0
+Kdz2 = 10.0
 
 # PID Gains for 1st order system with transfer function
 #    H(s) = 1 / s
-Kp1 = 10
-Ki1 = 0.0
-Kd1 = 10
-
+Kp1 = 3
+Ki1 = 0.5
+Kd1 = 4
+	
 
 
 # Helper code for visualizing the performance of the gains computed 
@@ -226,8 +234,8 @@ if __name__ == '__main__':
 	plant2 = ctl.tf(num2, den2)
 
 	# Define PID controller for 2nd order system
-	num_pid_2 = np.array([Kd2, Kp2])  #np.array([Kd2, Kp2, Ki2])
-	den_pid_2 = np.array([1.0])   #np.array([1.0, 0.0])
+	num_pid_2 = np.array([Kdz2, Kpz2, Kiz2])
+	den_pid_2 = np.array([1.0, 0.0])
 	pid2 = ctl.tf(num_pid_2, den_pid_2)
 
 	# Define 1st order system transfer function
@@ -278,6 +286,8 @@ if __name__ == '__main__':
 	ax0.set_xlabel("time {s}")
 	ax0.set_ylabel("x {m}")
 
+	print("PID Overshoot: {}".format(max(x_pid) - Rx))
+	print("")
 
 	ax1.plot(t, w_lqr, linestyle = '-',color ='r', label = "w_lqr")
 	ax1.plot(t, w_pp, linestyle = '-',color ='g', label = "w_pp")

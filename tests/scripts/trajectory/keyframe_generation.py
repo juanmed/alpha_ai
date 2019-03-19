@@ -50,12 +50,13 @@ class KeyframeGeneration:
             cp = -cp
             gate_psi = np.arctan2(cp[1], cp[0])
             gate_pose[3] = gate_psi
+
         #gate_pose = self.add_waypoint(gate_pose, cp)
         return gate_pose
 
     # add before and after waypoint at certain gate
     def add_waypoint(self, gate_pose, cp):
-        relaxation = 5
+        relaxation = 1
         cp = cp / np.linalg.norm(cp)
         before_waypoint = np.array([gate_pose[0]-cp[0]*relaxation, gate_pose[1]-cp[1]*relaxation, gate_pose[2]-cp[2]*relaxation, gate_pose[3]])
         after_waypoint = np.array([gate_pose[0]+cp[0]*relaxation, gate_pose[1]+cp[1]*relaxation, gate_pose[2]+cp[2]*relaxation, gate_pose[3]])
