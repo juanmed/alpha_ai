@@ -115,7 +115,7 @@ class GateDetector():
 
 
     def __init__(self):
-        rospy.init_node('gate_detector')
+        rospy.init_node('ir_detector')
         self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
         
         self.rate = 10
@@ -133,9 +133,9 @@ class GateDetector():
                     self.gate_location[i][j][k] = location[j][k]
         rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
-        self.pub_pose = rospy.Publisher('/uav/ir_pose', Pose, queue_size=10)
-        self.pub_velocity = rospy.Publisher('/uav/ir_velocity', Vector3, queue_size=10)
-        self.pub_attitude = rospy.Publisher('/uav/ir_euler', Vector3, queue_size=10)
+        self.pub_pose = rospy.Publisher('/estimator/ir_pose', Pose, queue_size=10)
+        self.pub_velocity = rospy.Publisher('/estimator/ir_velocity', Vector3, queue_size=10)
+        self.pub_attitude = rospy.Publisher('/estimator/ir_euler', Vector3, queue_size=10)
         self.state = Pose()
         self.state.position.x = self.init_pose[0]
         self.state.position.y = self.init_pose[1]

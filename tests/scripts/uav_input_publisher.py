@@ -39,7 +39,7 @@ class uav_Input_Publisher():
         elif( self.mode == 2):
 
             # create message message_filter
-            self.state_sub = message_filters.Subscriber('/uav/est/state', UAV_state)
+            self.state_sub = message_filters.Subscriber('/estimator/state', UAV_state)
 
         else:
             # create message message_filter

@@ -48,7 +48,7 @@ class LowPassFilter():
 
 
     def __init__(self):
-        rospy.init_node('LPF')
+        rospy.init_node('lpf')
 
         self.rate = 1000
         self.r = rospy.Rate(self.rate)
@@ -64,8 +64,8 @@ class LowPassFilter():
         self.z = np.zeros((6, 1))
 
         rospy.Subscriber('/uav/sensors/imu', Imu, self.imu_cb)
-        self.pub_angular_velocity = rospy.Publisher('/uav/LPF/angular_velocity', Vector3, queue_size=10)
-        self.pub_linear_acceleration = rospy.Publisher('/uav/LPF/linear_acceleration', Vector3, queue_size=10)
+        self.pub_angular_velocity = rospy.Publisher('/estimator/lpf/angular_velocity', Vector3, queue_size=10)
+        self.pub_linear_acceleration = rospy.Publisher('/estimator/lpf/linear_acceleration', Vector3, queue_size=10)
         self.past = rospy.Time.now()
 
         self.angular_velocity = Vector3()
