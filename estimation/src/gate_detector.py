@@ -17,26 +17,57 @@ class GateDetector():
         self.camera_matrix = np.array(camera_info.K).reshape(3, 3)
 
 
+    def next_cb(self, gate):
+        self.next_gate = gate
+
+
     def ir_cb(self, ir_array):
+        next_cnt = 0
         num = len(ir_array.markers)
-        print num
+        print "Detected IR markers: ", num
+        '''
+        for i in range(0, num):
+            if self.getID(ir_array.markers[i].landmarkID) == self.next_gate:
+                next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
+                next_array_num[next_cnt] = i
+                next_cnt += 1
+        print "Next gate: ", self.next_gate, next_cnt
+
+        if self.next_cnt == 4:
+            object_points = np.zeros((4, 3))
+            image_points = np.zeros((4, 2))
+            for i in range(0, 4):
+                object_points[i][0] = self.gate_location[self.next_gate-1][next_marker[i]-1][0]
+                object_points[i][1] = self.gate_location[self.next_gate-1][next_marker[i]-1][1]
+                object_points[i][2] = self.gate_location[self.next_gate-1][next_marker[i]-1][2]
+                image_points[i][0] = ir_array.markers[next_array_num[i]].x
+                image_points[i][1] = ir_array.markers[next_array_num[i]].y
+
+            rvec, tvec = self.getPose(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_P3P)
+            self.setState(rvec, tvec)
+            self.pub_pose.publish(self.state)
+            self.pub_attitude.publish(self.euler)
+            print 'P3P'
+        
+        elif num >= 5:
+        '''
         if num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
             for i in range(0, num):
-                image_points[i][0] = ir_array.markers[i].x
-                image_points[i][1] = ir_array.markers[i].y
-
                 gate_id = self.getID(ir_array.markers[i].landmarkID)
                 marker_id = self.getID(ir_array.markers[i].markerID)
                 object_points[i][0] = self.gate_location[gate_id-1][marker_id-1][0]
                 object_points[i][1] = self.gate_location[gate_id-1][marker_id-1][1]
                 object_points[i][2] = self.gate_location[gate_id-1][marker_id-1][2]
+                image_points[i][0] = ir_array.markers[i].x
+                image_points[i][1] = ir_array.markers[i].y
 
-            rvec, tvec = self.getPose(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)))
+            rvec, tvec = self.getPose(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_EPNP)
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
+            print 'EPNP'
 
 
     def getID(self, landmarkID):
@@ -44,8 +75,8 @@ class GateDetector():
         return i
 
 
-    def getPose(self, object_points, image_points):
-        ret, rvec, tvec = cv2.solvePnP(object_points, image_points, self.camera_matrix, None, flags=cv2.SOLVEPNP_EPNP)
+    def getPose(self, object_points, image_points, method):
+        ret, rvec, tvec = cv2.solvePnP(object_points, image_points, self.camera_matrix, None, flags=method)
         return np.array(rvec), np.array(tvec)
 
 
