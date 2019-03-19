@@ -9,13 +9,13 @@
 		<node pkg="tests" name="uav_trajectory_publisher" type="uav_reftraj_publisher.py"/>
 		
 	    <!-- EKF Node -->
-	    <node name="estimator_EKF" pkg="estimation" type="estimator_EKF_imu.py" />
+	    <node ns="estimator" name="EKF" pkg="estimation" type="estimator_EKF_imu.py" />
 
 	    <!-- LPF Node -->
-	    <node name="LPF_imu" pkg="estimation" type="LPF_imu.py" />
+	    <node ns="estimator" name="lpf" pkg="estimation" type="LPF_imu.py" />
 
 	    <!-- IR Detector Node-->
-	    <node name="gate_detector" pkg="estimation" type="gate_detector.py" />
+	    <node ns="estimator" name="ir_detector" pkg="estimation" type="gate_detector.py" />
 	    
 	    <!-- Controller Node-->
 		<node pkg="tests" name="uav_input_publisher" type="uav_input_publisher.py" output="screen"/>

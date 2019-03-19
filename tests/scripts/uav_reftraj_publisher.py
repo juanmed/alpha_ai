@@ -71,7 +71,7 @@ class Trajectory_Generator():
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
 
-        self.total_time = 20
+        self.total_time = 30
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
         #self.t = [0, 2, 2.5, 3, 4, 4.5, 5, 6, 6.5, 7, 8, 9, 10]
         self.t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]

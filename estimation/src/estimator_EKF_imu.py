@@ -295,9 +295,9 @@ class KalmanFilter():
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.000001, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.000001, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.000001, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.000001, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.000001, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.000001, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, self.range_var]])   # rangefinder
 
         self.P_pre = np.eye(9)*0.001
@@ -325,19 +325,19 @@ class KalmanFilter():
         self.ir_velocity_tf = False
         self.ir_pose_tf = False
 
-        rospy.Subscriber('/uav/LPF/angular_velocity', Vector3, self.gyro_cb)
-        rospy.Subscriber('/uav/LPF/linear_acceleration', Vector3, self.accel_cb)
+        rospy.Subscriber('/estimator/lpf/angular_velocity', Vector3, self.gyro_cb)
+        rospy.Subscriber('/estimator/lpf/linear_acceleration', Vector3, self.accel_cb)
         rospy.Subscriber('/svo/pose_imu', PoseWithCovarianceStamped, self.vision_cb)
-        rospy.Subscriber('/uav/ir_velocity', Vector3, self.ir_velocity_cb)
-        rospy.Subscriber('/uav/ir_pose', Pose, self.ir_pose_cb)
+        rospy.Subscriber('/estimator/ir_velocity', Vector3, self.ir_velocity_cb)
+        rospy.Subscriber('/estimator/ir_pose', Pose, self.ir_pose_cb)
         rospy.Subscriber('/uav/sensors/downward_laser_rangefinder', Range, self.range_cb)
 
-        self.pub_state = rospy.Publisher('/uav/est/state', UAV_state, queue_size=10)
-        self.pub_position = rospy.Publisher('/uav/est/position', Vector3, queue_size=10)
-        self.pub_attitude = rospy.Publisher('/uav/est/attitude', Vector3, queue_size=10)
-        self.pub_linear_velocity = rospy.Publisher('/uav/est/linear_velocity', Vector3, queue_size=10)
-        self.pub_attitude_vo = rospy.Publisher('/uav/attitude_vo', Vector3, queue_size=10)
-        self.pub_inertial_acceleration = rospy.Publisher('/uav/inertial_acceleration', Vector3, queue_size=10)
+        self.pub_state = rospy.Publisher('/estimator/state', UAV_state, queue_size=10)
+        self.pub_position = rospy.Publisher('/estimator/position', Vector3, queue_size=10)
+        self.pub_attitude = rospy.Publisher('/estimator/attitude', Vector3, queue_size=10)
+        self.pub_linear_velocity = rospy.Publisher('/estimator/linear_velocity', Vector3, queue_size=10)
+        self.pub_attitude_vo = rospy.Publisher('/svo/attitude_vo', Vector3, queue_size=10)
+        self.pub_inertial_acceleration = rospy.Publisher('/estimator/inertial_acceleration', Vector3, queue_size=10)
 
         self.state = UAV_state()
         self.position = Vector3()
@@ -365,18 +365,18 @@ class KalmanFilter():
         elif self.ir_pose_tf is True:
             if self.ir_velocity_tf is True:
                 print 'no VO'
-                self.K = multi_dot([self.P_pre, self.H[6:, :].T, inv(multi_dot([self.H[6:, :], self.P_pre, self.H[6:, :].T]) + self.R[6:, 6:])])
+                self.K = multi_dot([self.P_pre, self.H[6:15, :].T, inv(multi_dot([self.H[6:15, :], self.P_pre, self.H[6:15, :].T]) + self.R[6:15, 6:15])])
                 self.hx = self.gethx(self.x_pre)
-                self.x_est = self.x_pre + np.dot(self.K, self.z[6:, :] - self.hx[6:, :])
-                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[6:, :]), self.P_pre)
-                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[6:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[6:, :])).T]) + multi_dot([self.K, self.R[6:, 6:], self.K.T])
+                self.x_est = self.x_pre + np.dot(self.K, self.z[6:15, :] - self.hx[6:15, :])
+                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[6:15, :]), self.P_pre)
+                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[6:15, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[6:15, :])).T]) + multi_dot([self.K, self.R[6:15, 6:15], self.K.T])
             else:
                 print 'no VO, no velocity'
-                self.K = multi_dot([self.P_pre, self.H[9:, :].T, inv(multi_dot([self.H[9:, :], self.P_pre, self.H[9:, :].T]) + self.R[9:, 9:])])
+                self.K = multi_dot([self.P_pre, self.H[9:15, :].T, inv(multi_dot([self.H[9:15, :], self.P_pre, self.H[9:15, :].T]) + self.R[9:15, 9:15])])
                 self.hx = self.gethx(self.x_pre)
-                self.x_est = self.x_pre + np.dot(self.K, self.z[9:, :] - self.hx[9:, :])
-                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre)
-                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
+                self.x_est = self.x_pre + np.dot(self.K, self.z[9:15, :] - self.hx[9:15, :])
+                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:15, :]), self.P_pre)
+                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:15, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:15, :])).T]) + multi_dot([self.K, self.R[9:15, 9:15], self.K.T])
         else:
             print 'no VO, no IR'
             self.K = multi_dot([self.P_pre, self.H[15:, :].T, inv(multi_dot([self.H[15:, :], self.P_pre, self.H[15:, :].T]) + self.R[15:, 15:])])
