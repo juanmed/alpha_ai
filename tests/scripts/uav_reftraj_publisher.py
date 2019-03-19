@@ -6,7 +6,8 @@
 
 import rospy
 from tests.msg import UAV_traj
-from tests.msg import UAV_input
+from tests.msg import UAV_state
+from std_msgs.msg import String
 import tf
 import numpy as np
 
@@ -26,8 +27,10 @@ class Trajectory_Generator():
 
     def __init__(self):
 
+        self.gate_pub = rospy.Publisher('gate_number', String, queue_size=10)
+
         # choose one : level course or full course?
-        self.level = False
+        self.level = True
 
         # init parameters
         self.order = 10
@@ -119,21 +122,21 @@ class Trajectory_Generator():
 
         return ref_trajectory
 
-    def current_state_update(self, current_pos, current_vel, current_acc, current_jerk, current_snap):
-        self.current_pos = np.array(current_pos)
-        self.current_vel = np.array(current_vel)
-        self.current_acc = np.array(current_acc)
-        self.current_jerk = np.array(current_jerk)
-        self.current_snap = np.array(current_snap)
+    def current_state_update(self, msg):
+        self.current_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z, 0])
+        #self.current_vel = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z])
+        #self.current_acc = np.array(current_acc)
+        #self.current_jerk = np.array(current_jerk)
+        #self.current_snap = np.array(current_snap)
         self.current_state = np.vstack((self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
-
+        self.check_gate()
     # checking whether drone pass gate or not
     # It needs current position of drone.
-    def check_gate(self, current_position):
-        if self.gates[self.passed_gate].isEvent(current_position, self.tolerance):
+    def check_gate(self):
+        if self.gates[self.passed_gate].isEvent(self.current_state[0], self.tolerance):
             self.passed_gate = self.passed_gate + 1
             print "pass %d gate" % self.passed_gate
-
+        self.gate_pub.publish(self.gate_name[self.passed_gate])
 
     # keyframe and trajectory update
     # It needs current position of drone.
@@ -291,24 +294,24 @@ class Trajectory_Generator2():
 
 
 def pub_traj():
-
     # create topic for publishing ref trajectory
     traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size = 10)
+
 
     # init node
     # rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
     rospy.init_node('uav_ref_trajectory_input_publisher', anonymous=True)
+
+    # create a trajectory generator
+    traj_gen = Trajectory_Generator()
+    # traj_gen = Trajectory_Generator2()
+    # traj_gen = Trajectory_Generator_Test()
 
     # IMPORTANT WAIT TIME! 
     # If this is not here, the "start_time" in the trajectory generator is 
     # initialized to zero (because the node has not started fully) and the
     # time for the trajectory will be degenerated
     rospy.sleep(0.1)
- 
-    # create a trajectory generator
-    traj_gen = Trajectory_Generator()
-    #traj_gen = Trajectory_Generator2()
-    #traj_gen = Trajectory_Generator_Test()
 
     # publish at 10Hz
     rate = rospy.Rate(200.0)
@@ -320,6 +323,7 @@ def pub_traj():
     while not rospy.is_shutdown():
         
         try:
+            rospy.Subscriber('/estimator/state', UAV_state, traj_gen.current_state_update)
 
             # Compute trajectory at time = now
             time = rospy.get_time()   
@@ -330,11 +334,6 @@ def pub_traj():
             traj.header.stamp = rospy.Time.now()
             traj.header.frame_id = ""
 
-            input = UAV_input()
-            input.header.stamp = rospy.Time.now()
-            input.header.frame_id = ""
-
-            
             # get all values... we need to do this becuase ref_traj contains old, ugly np.matrix
             # objects >:(
             x, y, z = np.array(ref_traj[0]).flatten()

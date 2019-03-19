@@ -127,7 +127,6 @@ class ComputeConstraint:
                             A2[k + h*(self.n-1), :] = a
                             b2[k + h*(self.n-1)] = self.current_state[h+1][k]        # constraint_data_r[i, h]
 
-
                     #Final
                     values = np.zeros(self.order + 1)
                     for j in range(0, self.order+1):
@@ -298,7 +297,7 @@ class ComputeConstraint:
         b = matrix(b)
 
         return A, b
-
+    '''
     def compute_in(self, max_vel, max_acc, max_agular_vel, max_angular_acc):
         # constraint for maximum, minimum velocity
         G1 = np.zeros((2 * self.m * (self.n) * 2 * 2, self.n * (self.order + 1) * self.m))
@@ -350,7 +349,7 @@ class ComputeConstraint:
         G1 = matrix(G1)
         h1 = matrix(h1)
         return G1, h1
-
+    '''
     def compute_cr(self, corridor_position, n_intermediate, corridor_width):
         self.corridor_position = corridor_position
         self.n_intermediate = n_intermediate

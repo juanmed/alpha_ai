@@ -30,7 +30,7 @@ def qp_solution(order, n, waypoint, t, keyframe, current_state):
     max_acc = 0
     max_angular_vel = 0.1
     max_angular_acc = 0
-    G1, h1 = compute_constraint_cls.compute_in(max_vel, max_acc, max_angular_vel, max_angular_acc)
+    #G1, h1 = compute_constraint_cls.compute_in(max_vel, max_acc, max_angular_vel, max_angular_acc)
 
     # corridor_position : corridor constraint area setting
     #corridor_position = np.array([1, 2])        # None
@@ -48,14 +48,14 @@ def qp_solution(order, n, waypoint, t, keyframe, current_state):
 
     # quadratic programming
     #sol = solvers.qp(P, q, G1, h1, A, b)
-    sol = solvers.qp(P, q, G1, h1, A, b, kktsolver='ldl', options={'kktreg': 1e-9})
+    sol = solvers.qp(P, q, None, None, A, b, kktsolver='ldl', options={'kktreg': 1e-9})
     sol_x = sol['x']  # fval = sol['primal objective']
 
     # save as csv file
     # np.savetxt("A.csv", A, delimiter=",")
     # np.savetxt("b.csv", b, delimiter=",")
-    np.savetxt("G1.csv", G1, delimiter=",")
-    np.savetxt("h1.csv", h1, delimiter=",")
+    #np.savetxt("G1.csv", G1, delimiter=",")
+    #np.savetxt("h1.csv", h1, delimiter=",")
     #np.savetxt("x.csv", sol_x, delimiter=",")
 
     return sol_x
