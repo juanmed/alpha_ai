@@ -30,7 +30,7 @@ class Trajectory_Generator():
         self.gate_pub = rospy.Publisher('gate_number', String, queue_size=10)
 
         # choose one : level course or full course?
-        self.level = True
+        self.level = False
 
         # init parameters
         self.order = 10
@@ -48,7 +48,7 @@ class Trajectory_Generator():
         else:
             self.gate_count = 11
             self.init_pose = np.array([0.0, 0.0, 1.0, 0.0])
-            self.init_pose = parameter.init_pose
+            #self.init_pose = parameter.init_pose
             # this is for trajectory with full gate ( maybe final test3 )
             # set time interval depending on distance between gate
             self.t = 2 * np.array([0, 1, 2, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7.5, 8.5])
@@ -62,7 +62,6 @@ class Trajectory_Generator():
             # generate keyframe
             is_quaternion = True
             self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
-
         else:
             # get gate location
             self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count)
@@ -78,10 +77,6 @@ class Trajectory_Generator():
         self.total_time = 30
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
 
-        #self.t = [0, 2, 2.5, 3, 4, 4.5, 5, 6, 6.5, 7, 8, 9, 10]
-        self.t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        #self.t = [0, 1, 2, 3, 4]
-        #self.t = np.array(self.t) * 40
         self.t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
         #self.t = np.array(self.t) * 40
         #self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8, 

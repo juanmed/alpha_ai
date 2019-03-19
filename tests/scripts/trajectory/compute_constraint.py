@@ -298,10 +298,10 @@ class ComputeConstraint:
 
         return A, b
     '''
-    def compute_in(self, max_vel, max_acc, max_agular_vel, max_angular_acc):
+    def compute_in(self, max_vel, max_acc, max_angular_vel, max_angular_acc):
         # constraint for maximum, minimum velocity
-        G1 = np.zeros((2 * self.m * (self.n) * 2 * 2, self.n * (self.order + 1) * self.m))
-        h1 = np.ones((2 * self.m * (self.n) * 2 * 2, 1))
+        G1 = np.zeros((2 * self.m * self.n * 2 * 2, self.n * (self.order + 1) * self.m))
+        h1 = np.ones((2 * self.m * self.n * 2 * 2, 1))
 
         compute_mat = np.eye(self.order + 1)
 
@@ -315,41 +315,57 @@ class ComputeConstraint:
                     for k in range(0, h + 1):
                         tempCoeffs = np.polyder(tempCoeffs)
                     values[j] = np.polyval(tempCoeffs, self.t[i])
-                for k in range(0, self.n - 1):
+                for k in range(0, self.n):
                     g = np.zeros(self.n * (self.order + 1) * self.m)
                     g[i * (self.order + 1) * self.n + k * (self.order + 1): i * (self.order + 1) * self.n + k * (self.order + 1) + self.order + 1] = values
-                    G1[2 * (k + h*(self.n-1) + i*(self.n-1)*2), :] = g
-                    G1[2 * (k + h*(self.n-1) + i*(self.n-1)*2) + 1, :] = -g
+                    G1[2 * (k + h * self.n + i * self.n * 2), :] = g
+                    G1[2 * (k + h * self.n + i * self.n * 2) + 1, :] = -g
                     if h == 0:
-                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2)] = max_vel
-                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2) + 1] = -max_vel
+                        if k != 3:
+                            h1[2 * (k + h * self.n + i * self.n *2)] = max_vel
+                            h1[2 * (k + h * self.n + i * self.n *2) + 1] = -max_vel
+                        else:
+                            h1[2 * (k + h * self.n + i * self.n * 2)] = max_angular_vel
+                            h1[2 * (k + h * self.n + i * self.n * 2) + 1] = -max_angular_vel
                     elif h == 1:
-                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2)] = max_acc
-                        h1[2 * (k + h*(self.n-1) + i*(self.n-1)*2) + 1] = -max_acc
-
+                        if k != 3:
+                            h1[2 * (k + h * self.n + i * self.n * 2)] = max_acc
+                            h1[2 * (k + h * self.n + i * self.n * 2) + 1] = -max_acc
+                        else:
+                            h1[2 * (k + h * self.n + i * self.n * 2)] = max_angular_acc
+                            h1[2 * (k + h * self.n + i * self.n * 2) + 1] = -max_angular_acc
                 values = np.zeros(self.order + 1)
                 for j in range(0, self.order + 1):
                     tempCoeffs = compute_mat[j, :]
                     for k in range(0, h + 1):
                         tempCoeffs = np.polyder(tempCoeffs)
                     values[j] = np.polyval(tempCoeffs, self.t[i+1])
-                for k in range(0, self.n - 1):
+                for k in range(0, self.n):
                     g = np.zeros(self.n * (self.order + 1) * self.m)
                     g[i * (self.order + 1) * self.n + k * (self.order + 1): i * (self.order + 1) * self.n + k * (self.order + 1) + self.order + 1] = values
-                    G1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2), :] = g
-                    G1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2) + 1, :] = -g
+                    G1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2), :] = g
+                    G1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2) + 1, :] = -g
                     if h == 0:
-                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2)] = max_vel
-                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2) + 1] = -max_vel
+                        if k != 3:
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2)] = max_vel
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2) + 1] = -max_vel
+                        else:
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2)] = max_angular_vel
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2) + 1] = -max_angular_vel
                     elif h == 1:
-                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2)] = max_acc
-                        h1[((self.n - 1) * self.m * 2 * 2) + 2 * (k + h * (self.n - 1) + i * (self.n - 1) * 2) + 1] = -max_acc
+                        if k != 3:
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2)] = max_acc
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2) + 1] = -max_acc
+                        else:
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2)] = max_angular_acc
+                            h1[(self.n * self.m * 2 * 2) + 2 * (k + h * self.n + i * self.n * 2) + 1] = -max_angular_acc
 
 
         G1 = matrix(G1)
         h1 = matrix(h1)
         return G1, h1
-    '''
+        '''
+
     def compute_cr(self, corridor_position, n_intermediate, corridor_width):
         self.corridor_position = corridor_position
         self.n_intermediate = n_intermediate
