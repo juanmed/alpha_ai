@@ -73,8 +73,7 @@ class Trajectory_Generator():
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
 
-
-        self.total_time = 120
+        self.total_time = 30
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
         self.t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
         #self.t = np.array(self.t) * 40
