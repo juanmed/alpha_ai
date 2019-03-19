@@ -6,6 +6,7 @@ import cv2
 import re
 from math import sqrt, sin, cos, asin, atan2
 
+from std_msgs.msg import Int32
 from geometry_msgs.msg import Pose, Vector3
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import CameraInfo
@@ -18,7 +19,7 @@ class GateDetector():
 
 
     def next_cb(self, gate):
-        self.next_gate = gate
+        self.next_gate = gate.data
 
 
     def ir_cb(self, ir_array):
@@ -32,7 +33,7 @@ class GateDetector():
                 next_array_num[next_cnt] = i
                 next_cnt += 1
         print "Next gate: ", self.next_gate, next_cnt
-
+        '''
         if self.next_cnt == 4:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -50,8 +51,6 @@ class GateDetector():
             print 'P3P'
         
         elif num >= 5:
-        '''
-        if num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
             for i in range(0, num):
@@ -155,22 +154,26 @@ class GateDetector():
         self.camera_matrix = np.array([[548.4088134765625, 0.0, 512.0],
                                        [0.0, 548.4088134765625, 384.0],
                                        [0.0, 0.0, 1.0]])
-        gate_num = 23
-        self.gate_location = np.zeros((gate_num+1, 4, 3))
-        for i in range(0, gate_num):
+        max_gate = 23
+        self.gate_location = np.zeros((max_gate+1, 4, 3))
+        for i in range(0, max_gate):
             location = rospy.get_param('/uav/Gate' + str(i+1) + '/nominal_location')
             for j in range(0, 4):
                 for k in range(0, 3):
                     self.gate_location[i][j][k] = location[j][k]
+
+        rospy.Subscriber('/next_destination', Int32, self.next_cb)
         rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
         self.pub_pose = rospy.Publisher('/estimator/ir_pose', Pose, queue_size=10)
         self.pub_velocity = rospy.Publisher('/estimator/ir_velocity', Vector3, queue_size=10)
         self.pub_attitude = rospy.Publisher('/estimator/ir_euler', Vector3, queue_size=10)
+
         self.state = Pose()
         self.state.position.x = self.init_pose[0]
         self.state.position.y = self.init_pose[1]
         self.state.position.z = self.init_pose[2]
+
         self.velocity = Vector3()
         self.velocity_tmp = Vector3()
         self.euler = Vector3()
