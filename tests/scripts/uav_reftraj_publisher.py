@@ -30,7 +30,7 @@ class Trajectory_Generator():
         self.gate_pub = rospy.Publisher('gate_number', String, queue_size=10)
 
         # choose one : level course or full course?
-        self.level = False
+        self.level = True
 
         # init parameters
         self.order = 10
@@ -95,7 +95,7 @@ class Trajectory_Generator():
         # compute flat output trajectory
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe, self.current_state)
         # draw trajectory in plot
-        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
 
         # for counting gate
         self.passed_gate = 0
@@ -300,10 +300,16 @@ def pub_traj():
     # create topic for publishing ref trajectory
     traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size = 10)
 
-
     # init node
     # rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
     rospy.init_node('uav_ref_trajectory_input_publisher', anonymous=True)
+
+    # wait time for simulator to get ready...
+    wait_time = int(rospy.get_param("riseq/trajectory_wait"))
+    while( rospy.Time.now().to_sec() < wait_time ):
+        if( ( int(rospy.Time.now().to_sec()) % 1) == 0 ):
+            rospy.loginfo("Starting Trajectory Generator in {:.2f} seconds".format(wait_time - rospy.Time.now().to_sec()))
+    
 
     # create a trajectory generator
     traj_gen = Trajectory_Generator()
