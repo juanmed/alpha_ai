@@ -54,17 +54,24 @@ class GateDetector():
             object_points[:, 1] = object_points[:, 1] - ty
             object_points[:, 2] = object_points[:, 2] - tz
             rot = atan2((object_points[1][1]+object_points[2][1]+object_points[3][1])/2, (object_points[1][0]+object_points[2][0]+object_points[3][0])/2)
-            flat_points = np.dot(np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]]), object_points.T)
+            rot_mat = np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]])
+            flat_points = np.dot(rot_mat, object_points.T)
             #src_points = np.delete(np.dot(np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]]), object_points.T).T, 1, axis=1)
-            src_points = np.array([flat_points[0, :], flat_points[2, :]]).T
+            Rwf = np.array([[-1, 0, 0], [0, 0, -1], [0, -1, 0]])
+            src_points = np.dot(Rwf, flat_points).T #np.array([flat_points[0, :], flat_points[2, :]]).T
 
-            H, status = cv2.findHomography(src_points, image_points, method=0)
+            H, status = cv2.findHomography(src_points[:, 0:2], image_points, method=0)
             rt = np.dot(np.linalg.inv(self.camera_matrix), H)
+            R = np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]))).reshape(3, 3).T
             t = rt[:, 2]
             Rt = np.insert(np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]), t)).reshape(4, 3).T, 3, [0, 0, 0, 1], axis=0)
-            #Rt[2][3] = 
-            print np.dot(np.dot(self.camera_matrix, rt), np.vstack((src_points.T, [1, 1, 1, 1])))
-            print image_points
+
+            RRR = np.linalg.multi_dot([R.T, Rwf.T, rot_mat.T])
+            print self.rotation2euler(RRR)
+
+            #print np.dot(np.linalg.inv(self.camera_matrix), np.vstack((image_points.T, [1, 1, 1, 1])))
+            #print np.dot(np.dot(self.camera_matrix, rt), np.vstack((src_points.T, [1, 1, 1, 1])))
+            #print image_points
 
             #self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
@@ -132,22 +139,6 @@ class GateDetector():
         qy = sin(pi/2)*cos(theta/2)*sin(psi/2) + cos(pi/2)*sin(theta/2)*cos(psi/2)
         qz = cos(pi/2)*cos(theta/2)*sin(psi/2) - sin(pi/2)*sin(theta/2)*cos(psi/2)
         return qw, qx, qy, qz
-
-
-    def rotationMatrixToEulerAngles(self, R):
-        sy = math.sqrt(R[0][0] * R[0][0] +  R[1][0] * R[1][0])
-        singular = sy < 1e-6
-
-        if  not singular :
-            x = math.atan2(R[2][1] , R[2][2])
-            y = math.atan2(-R[2][0], sy)
-            z = math.atan2(R[1][0], R[0][0])
-        else :
-            x = math.atan2(-R[1][2], R[1][1])
-            y = math.atan2(-R[2][0], sy)
-            z = 0
-        print x, y, z
-        #return np.rad2deg(y)
 
 
     def setState(self, rvec, tvec):
