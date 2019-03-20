@@ -25,12 +25,13 @@ def qp_solution(order, n, waypoint, t, keyframe, current_state):
     compute_constraint_cls = compute_constraint.ComputeConstraint(order, m, k_r, k_psi, t, keyframe, current_state)
     A, b = compute_constraint_cls.compute_eq()
 
+    '''
     # compute inequality constraint : G,h
-    max_vel = 1
+    max_vel = 0
     max_acc = 0
-    max_angular_vel = 0.1
+    max_angular_vel = 0
     max_angular_acc = 0
-    #G1, h1 = compute_constraint_cls.compute_in(max_vel, max_acc, max_angular_vel, max_angular_acc)
+    G1, h1 = compute_constraint_cls.compute_in(max_vel, max_acc, max_angular_vel, max_angular_acc)
 
     # corridor_position : corridor constraint area setting
     #corridor_position = np.array([1, 2])        # None
@@ -40,6 +41,7 @@ def qp_solution(order, n, waypoint, t, keyframe, current_state):
 
     #G = matrix([G1, G2])
     #h = matrix([h1, h2])
+    '''
 
     # check A,b and rank of A
 
