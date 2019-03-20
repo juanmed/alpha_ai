@@ -6,5 +6,5 @@
     <node name="LPF_imu" pkg="estimation" type="LPF_imu.py" />
 
     <!-- IR detector node-->
-    <node name="gate_detector" pkg="estimation" type="gate_detector.py" />
+    <node name="gate_detector" pkg="estimation" type="gate_detector.py" output="screen" />
 </launch>
