@@ -317,28 +317,31 @@ class KalmanFilter():
         self.P_pre = multi_dot([self.Fd, self.P_est, self.Fd.T]) + self.Q
 
         # calculate Kalman Gain, estimate
-        if self.ir_pose_tf is True:
-            if self.ir_velocity_tf is True:
-                print 'IR on'
-                self.K = multi_dot([self.P_pre, self.H[0:9, :].T, inv(multi_dot([self.H[0:9, :], self.P_pre, self.H[0:9, :].T]) + self.R[0:9, 0:9])])
-                self.hx = self.gethx(self.x_pre)
-                self.x_est = self.x_pre + np.dot(self.K, self.z[0:9, :] - self.hx[0:9, :])
-                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[0:9, :]), self.P_pre)
-                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[0:9, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[0:9, :])).T]) + multi_dot([self.K, self.R[0:9, 0:9], self.K.T])
-            else:
-                print 'IR pose on'
-                self.K = multi_dot([self.P_pre, self.H[3:9, :].T, inv(multi_dot([self.H[3:9, :], self.P_pre, self.H[3:9, :].T]) + self.R[3:9, 3:9])])
-                self.hx = self.gethx(self.x_pre)
-                self.x_est = self.x_pre + np.dot(self.K, self.z[3:9, :] - self.hx[3:9, :])
-                #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre)
-                self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[3:9, :])).T]) + multi_dot([self.K, self.R[3:9, 3:9], self.K.T])
+        if self.ir_velocity_tf is True:
+            print 'IR on'
+            self.K = multi_dot([self.P_pre, self.H[0:9, :].T, inv(multi_dot([self.H[0:9, :], self.P_pre, self.H[0:9, :].T]) + self.R[0:9, 0:9])])
+            self.hx = self.gethx(self.x_pre)
+            self.x_est = self.x_pre + np.dot(self.K, self.z[0:9, :] - self.hx[0:9, :])
+            #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[0:9, :]), self.P_pre)
+            self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[0:9, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[0:9, :])).T]) + multi_dot([self.K, self.R[0:9, 0:9], self.K.T])
+        elif self.ir_pose_tf is True:
+            print 'IR pose on'
+            self.K = multi_dot([self.P_pre, self.H[3:9, :].T, inv(multi_dot([self.H[3:9, :], self.P_pre, self.H[3:9, :].T]) + self.R[3:9, 3:9])])
+            self.hx = self.gethx(self.x_pre)
+            self.x_est = self.x_pre + np.dot(self.K, self.z[3:9, :] - self.hx[3:9, :])
+            #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre)
+            self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[3:9, :])).T]) + multi_dot([self.K, self.R[3:9, 3:9], self.K.T])
+#        else:
+#            print 'IMU'
+#            self.K = multi_dot([self.P_pre, self.H[9:, :].T, inv(multi_dot([self.H[9:, :], self.P_pre, self.H[9:, :].T]) + self.R[9:, 9:])])
+#            self.hx = self.gethx(self.x_pre)
+#            self.x_est = self.x_pre + np.dot(self.K, self.z[9:, :] - self.hx[9:, :])
+#            #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre)
+#            self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
         else:
             print 'IMU'
-            self.K = multi_dot([self.P_pre, self.H[9:, :].T, inv(multi_dot([self.H[9:, :], self.P_pre, self.H[9:, :].T]) + self.R[9:, 9:])])
-            self.hx = self.gethx(self.x_pre)
-            self.x_est = self.x_pre + np.dot(self.K, self.z[9:, :] - self.hx[9:, :])
-            #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre)
-            self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
+            self.x_est = self.x_pre
+            self.P_est = self.P_pre
 
         self.limitAngle()
         self.setState()
