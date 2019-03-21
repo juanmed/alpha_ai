@@ -30,7 +30,7 @@ class uav_Input_Publisher():
         self.reftraj_sub = message_filters.Subscriber('/uav_ref_trajectory', UAV_traj)
 
         # Switch between modes
-        self.mode = 1   # 1: use true state,  2: use estimated state
+        self.mode = 2   # 1: use true state,  2: use estimated state
         if( self.mode == 1):
 
             # create message message_filter
