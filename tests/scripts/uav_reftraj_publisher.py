@@ -37,8 +37,9 @@ class Trajectory_Generator():
         self.n = 4
 
         self.inflation = parameter.inflation
-        self.tolerance = parameter.tolerance
+        self.tolerance = 1
 
+        '''
         if self.level is True:
             self.gate_name = parameter.gate_name
             self.gate_count = len(self.gate_name)
@@ -52,6 +53,10 @@ class Trajectory_Generator():
             # this is for trajectory with full gate ( maybe final test3 )
             # set time interval depending on distance between gate
             self.t = 2 * np.array([0, 1, 2, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7.5, 8.5])
+        '''
+        self.gate_name = parameter.gate_name
+        self.gate_count = len(self.gate_name)
+        self.init_pose = parameter.init_pose
 
         self.gate_location_cls = get_gate_location.GateLocation()
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
@@ -77,12 +82,12 @@ class Trajectory_Generator():
         self.total_time = 30
         self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
 
-        self.t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
+        #self.t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
         #self.t = np.array(self.t) * 40
         #self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8, 
         #            5.0, 5.05, 5.1, 5.3, 5.35, 5.4, 5.6, 5.65, 5.7, 5.9, 5.95, 6, 6.3, 6.35, 6.4,
         #             6.7, 6.75, 8]
-        self.t = np.array(self.t) * 9
+        #self.t = np.array(self.t) * 9
 
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = np.array([0, 0, 0, 0])  # x y z psi
@@ -132,13 +137,17 @@ class Trajectory_Generator():
         #self.current_jerk = np.array(current_jerk)
         #self.current_snap = np.array(current_snap)
         self.current_state = np.vstack((self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
-        self.check_gate()
+
+        if self.passed_gate < len(self.gate_name):
+            self.check_gate()
+            print "%d gate pass" % self.passed_gate
+        else:
+            print "almost finish!!"
     # checking whether drone pass gate or not
     # It needs current position of drone.
     def check_gate(self):
         if self.gates[self.passed_gate].isEvent(self.current_state[0], self.tolerance):
-            self.passed_gate = self.passed_gate + 1
-            print "pass %d gate" % self.passed_gate
+                self.passed_gate = self.passed_gate + 1
         self.gate_pub.publish(self.gate_name[self.passed_gate])
 
     # keyframe and trajectory update
@@ -298,7 +307,7 @@ class Trajectory_Generator2():
 
 def pub_traj():
     # create topic for publishing ref trajectory
-    traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size = 10)
+    traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size=10)
 
     # init node
     # rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
@@ -316,7 +325,10 @@ def pub_traj():
     # traj_gen = Trajectory_Generator2()
     # traj_gen = Trajectory_Generator_Test()
 
-    # IMPORTANT WAIT TIME! 
+    # subscribe state
+    rospy.Subscriber('/estimator/state', UAV_state, traj_gen.current_state_update)
+
+    # IMPORTANT WAIT TIME!
     # If this is not here, the "start_time" in the trajectory generator is 
     # initialized to zero (because the node has not started fully) and the
     # time for the trajectory will be degenerated
@@ -332,8 +344,6 @@ def pub_traj():
     while not rospy.is_shutdown():
         
         try:
-            rospy.Subscriber('/estimator/state', UAV_state, traj_gen.current_state_update)
-
             # Compute trajectory at time = now
             time = rospy.get_time()   
             ref_traj = traj_gen.compute_reference_traj(time)
