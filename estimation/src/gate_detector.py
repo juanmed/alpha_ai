@@ -29,7 +29,7 @@ class GateDetector():
         next_array_num = [0, 0, 0, 0]
         num = len(ir_array.markers)
         nnum = 0
-        print "Detected IR markers: ", num
+        #print "Detected IR markers: ", num
         for i in range(0, num):
             if self.gate_perturbation[self.getID(ir_array.markers[i].landmarkID)] <= 1.0:
                 nnum += 1
@@ -38,7 +38,7 @@ class GateDetector():
                 next_array_num[next_cnt] = i
                 next_cnt += 1
         
-        print "Next gate: ", self.next_gate, next_cnt
+        #print "Next gate: ", self.next_gate, next_cnt
         
         if next_cnt == 4:
             object_points = np.zeros((4, 3))
@@ -52,10 +52,8 @@ class GateDetector():
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((4,1,2)), cv2.SOLVEPNP_AP3P)
             print 'AP3P'
             self.setState(rvec, tvec)
-            self.pub_pose.publish(self.state)
-            self.pub_attitude.publish(self.euler)
         
-        elif num >= 8:
+        elif num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
             for i in range(0, num):
@@ -69,8 +67,6 @@ class GateDetector():
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_EPNP)
             print 'EPNP'
             self.setState(rvec, tvec)
-            self.pub_pose.publish(self.state)
-            self.pub_attitude.publish(self.euler)
         '''
         elif nnum >= 5:
             object_points = np.zeros((nnum, 3))
@@ -93,6 +89,8 @@ class GateDetector():
             self.pub_attitude.publish(self.euler)
         '''
         if self.velocity_tf is True:
+            self.pub_pose.publish(self.state)
+            self.pub_attitude.publish(self.euler)
             self.pub_velocity.publish(self.velocity)
             self.velocity_tf = False
 
@@ -164,6 +162,10 @@ class GateDetector():
         self.euler.y = theta_r
         self.euler.z = psi_r
 
+        self.x_backup = self.state.position.x
+        self.y_backup = self.state.position.y
+        self.z_backup = self.state.position.z
+
 
     def __init__(self):
         rospy.init_node('ir_detector')
@@ -172,7 +174,7 @@ class GateDetector():
         self.rate = 10
         self.r = rospy.Rate(self.rate)
 
-        self.alpha = 1.0
+        self.alpha = 0.2
         self.x_backup = 0.0
         self.y_backup = 0.0
         self.z_backup = 0.0
@@ -206,11 +208,13 @@ class GateDetector():
         self.state.position.z = self.init_pose[2]
 
         self.velocity = Vector3()
-        self.velocity_tmp = Vector3()
         self.euler = Vector3()
         self.x_tmp = self.init_pose[0]
         self.y_tmp = self.init_pose[1]
         self.z_tmp = self.init_pose[2]
+        self.vx_tmp = 0.0
+        self.vy_tmp = 0.0
+        self.vz_tmp = 0.0
 
         self.limit_vel = 5
 
@@ -219,8 +223,10 @@ class GateDetector():
         self.velocity.x = (self.state.position.x - self.x_tmp) * self.rate
         self.velocity.y = (self.state.position.y - self.y_tmp) * self.rate
         self.velocity.z = (self.state.position.z - self.z_tmp) * self.rate
-        if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) < self.limit_vel:
-            self.velocity_tmp = self.velocity
+        if sqrt((self.velocity.x-self.vx_tmp)**2 + (self.velocity.y-self.vy_tmp)**2 + (self.velocity.z-self.vz_tmp)**2) < self.limit_vel:
+            self.vx_tmp = self.velocity.x
+            self.vy_tmp = self.velocity.y
+            self.vz_tmp = self.velocity.z
             self.velocity_tf = True
 
         self.x_tmp = self.state.position.x
