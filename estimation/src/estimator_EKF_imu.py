@@ -183,9 +183,14 @@ class KalmanFilter():
 
     def setState(self):
         self.state.header.stamp = rospy.Time.now()
-        self.state.pose.position.x = (1-self.alpha)*self.state.pose.position.x + self.alpha*self.x_est[0][0]
-        self.state.pose.position.y = (1-self.alpha)*self.state.pose.position.y + self.alpha*self.x_est[1][0]
-        self.state.pose.position.z = (1-self.alpha)*self.state.pose.position.z + self.alpha*self.x_est[2][0]
+        if abs(self.state.pose.position.x - self.x_backup) > 1 or abs(self.state.pose.position.y - self.y_backup) > 1 or abs(self.state.pose.position.z - self.z_backup) > 1:
+            self.state.pose.position.x = self.x_backup
+            self.state.pose.position.y = self.y_backup
+            self.state.pose.position.z = self.z_backup
+        else:
+            self.state.pose.position.x = (1-self.alpha)*self.x_backup + self.alpha*self.x_est[0][0]
+            self.state.pose.position.y = (1-self.alpha)*self.y_backup + self.alpha*self.x_est[1][0]
+            self.state.pose.position.z = (1-self.alpha)*self.z_backup + self.alpha*self.x_est[2][0]
         self.state.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
         self.state.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
         self.state.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
@@ -206,6 +211,10 @@ class KalmanFilter():
         self.linear_velocity.x = self.x_est[6][0]
         self.linear_velocity.y = self.x_est[7][0]
         self.linear_velocity.z = self.x_est[8][0]
+
+        self.x_backup = self.state.pose.position.x
+        self.y_backup = self.state.pose.position.y
+        self.z_backup = self.state.pose.position.z
 
 
     def __init__(self):
@@ -231,7 +240,10 @@ class KalmanFilter():
         self.r = rospy.Rate(self.rate)
         self.dT = 1.0/self.rate
 
-        self.alpha = 0.7
+        self.x_backup = 0.0
+        self.y_backup = 0.0
+        self.z_backup = 0.0
+        self.alpha = 1.0
 
         self.H = np.array([[0, 0, 0, 0, 0, 0, 1, 0, 0],     # ir marker
                            [0, 0, 0, 0, 0, 0, 0, 1, 0],

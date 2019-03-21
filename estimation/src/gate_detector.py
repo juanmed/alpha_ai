@@ -76,7 +76,7 @@ class GateDetector():
             #print np.dot(np.dot(self.camera_matrix, rt), np.vstack((src_points.T, [1, 1, 1, 1])))
             #print image_points
         '''
-        
+        '''
         if next_cnt == 4:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -91,8 +91,8 @@ class GateDetector():
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
             print 'AP3P'
-        
-        elif num >= 5:
+        '''
+        if num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
             for i in range(0, num):
@@ -124,13 +124,6 @@ class GateDetector():
         return np.array([[0, -v[2], v[1]],
                          [v[2], 0, -v[0]],
                          [-v[1], v[0], 0]])
-
-
-    def rodrigues2rotation(self, v):
-        theta = sqrt(v[0]**2 + v[1]**2 + v[2]**2)
-        r = np.array([v[0], v[1], v[2]]) / theta
-        R = cos(theta)*np.eye(3) + sin(theta)*self.hat(r) + (1-cos(theta))*np.dot(r, r.T)
-        return R
 
 
     def rotation2quaternion(self, R):
@@ -202,7 +195,7 @@ class GateDetector():
             for j in range(0, 4):
                 for k in range(0, 3):
                     self.gate_location[i][j][k] = location[j][k]
-        self.next_gate = 0
+        self.next_gate = self.getID(rospy.get_param("/uav/gate_names")[0])
 
         rospy.Subscriber('/gate_number', String, self.next_cb)
         rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
