@@ -183,9 +183,9 @@ class KalmanFilter():
 
     def setState(self):
         self.state.header.stamp = rospy.Time.now()
-        self.state.pose.position.x = self.x_est[0][0]
-        self.state.pose.position.y = self.x_est[1][0]
-        self.state.pose.position.z = self.x_est[2][0]
+        self.state.pose.position.x = (1-self.alpha)*self.state.pose.position.x + self.alpha*self.x_est[0][0]
+        self.state.pose.position.y = (1-self.alpha)*self.state.pose.position.y + self.alpha*self.x_est[1][0]
+        self.state.pose.position.z = (1-self.alpha)*self.state.pose.position.z + self.alpha*self.x_est[2][0]
         self.state.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
         self.state.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
         self.state.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
@@ -230,6 +230,8 @@ class KalmanFilter():
         self.rate = 200
         self.r = rospy.Rate(self.rate)
         self.dT = 1.0/self.rate
+
+        self.alpha = 0.7
 
         self.H = np.array([[0, 0, 0, 0, 0, 0, 1, 0, 0],     # ir marker
                            [0, 0, 0, 0, 0, 0, 0, 1, 0],
@@ -348,6 +350,7 @@ class KalmanFilter():
 
         self.ir_pose_tf = False
         self.ir_velocity_tf = False
+
         self.r.sleep()
 
 
