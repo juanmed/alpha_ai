@@ -309,10 +309,16 @@ def pub_traj():
     # create topic for publishing ref trajectory
     traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size=10)
 
-
     # init node
     # rospy.init_node('uav_ref_trajectory_publisher', anonymous = True)
     rospy.init_node('uav_ref_trajectory_input_publisher', anonymous=True)
+
+    # wait time for simulator to get ready...
+    wait_time = int(rospy.get_param("riseq/trajectory_wait"))
+    while( rospy.Time.now().to_sec() < wait_time ):
+        if( ( int(rospy.Time.now().to_sec()) % 1) == 0 ):
+            rospy.loginfo("Starting Trajectory Generator in {:.2f} seconds".format(wait_time - rospy.Time.now().to_sec()))
+    
 
     # create a trajectory generator
     traj_gen = Trajectory_Generator()

@@ -4,9 +4,10 @@ import rospy
 import numpy as np
 import cv2
 import re
+import math
 from math import sqrt, sin, cos, asin, atan2
 
-from std_msgs.msg import Int32
+from std_msgs.msg import String
 from geometry_msgs.msg import Pose, Vector3
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import CameraInfo
@@ -19,21 +20,63 @@ class GateDetector():
 
 
     def next_cb(self, gate):
-        self.next_gate = gate.data
+        self.next_gate = self.getID(gate.data)
 
 
     def ir_cb(self, ir_array):
         next_cnt = 0
+        next_marker = [0, 0, 0, 0]
+        next_array_num = [0, 0, 0, 0]
         num = len(ir_array.markers)
         print "Detected IR markers: ", num
-        '''
+        
         for i in range(0, num):
             if self.getID(ir_array.markers[i].landmarkID) == self.next_gate:
                 next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
                 next_array_num[next_cnt] = i
                 next_cnt += 1
-        print "Next gate: ", self.next_gate, next_cnt
+        if self.next_gate == 0:
+            print "Not defined."
+        else:
+            print "Next gate: ", self.next_gate, next_cnt
         '''
+        if next_cnt == 4:
+            dst_points = np.zeros((4, 2))
+            object_points = np.zeros((4, 3))
+            image_points = np.zeros((4, 2))
+            for i in range(0, 4):
+                object_points[i][0] = self.gate_location[self.next_gate-1][next_marker[i]-1][0]
+                object_points[i][1] = self.gate_location[self.next_gate-1][next_marker[i]-1][1]
+                object_points[i][2] = self.gate_location[self.next_gate-1][next_marker[i]-1][2]
+                image_points[i][0] = ir_array.markers[next_array_num[i]].x
+                image_points[i][1] = ir_array.markers[next_array_num[i]].y
+            tx = object_points[0][0]
+            ty = object_points[0][1]
+            tz = object_points[0][2]
+            object_points[:, 0] = object_points[:, 0] - tx
+            object_points[:, 1] = object_points[:, 1] - ty
+            object_points[:, 2] = object_points[:, 2] - tz
+            rot = atan2((object_points[1][1]+object_points[2][1]+object_points[3][1])/2, (object_points[1][0]+object_points[2][0]+object_points[3][0])/2)
+            rot_mat = np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]])
+            flat_points = np.dot(rot_mat, object_points.T)
+            #src_points = np.delete(np.dot(np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]]), object_points.T).T, 1, axis=1)
+            Rwf = np.array([[-1, 0, 0], [0, 0, -1], [0, -1, 0]])
+            src_points = np.dot(Rwf, flat_points).T #np.array([flat_points[0, :], flat_points[2, :]]).T
+
+            H, status = cv2.findHomography(src_points[:, 0:2], image_points, method=0)
+            rt = np.dot(np.linalg.inv(self.camera_matrix), H)
+            R = np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]))).reshape(3, 3).T
+            t = rt[:, 2]
+            Rt = np.insert(np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]), t)).reshape(4, 3).T, 3, [0, 0, 0, 1], axis=0)
+
+            RRR = np.linalg.multi_dot([R.T, Rwf.T, rot_mat.T])
+            print self.rotation2euler(RRR)
+
+            #print np.dot(np.linalg.inv(self.camera_matrix), np.vstack((image_points.T, [1, 1, 1, 1])))
+            #print np.dot(np.dot(self.camera_matrix, rt), np.vstack((src_points.T, [1, 1, 1, 1])))
+            #print image_points
+        '''
+        
         if next_cnt == 4:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -43,12 +86,11 @@ class GateDetector():
                 object_points[i][2] = self.gate_location[self.next_gate-1][next_marker[i]-1][2]
                 image_points[i][0] = ir_array.markers[next_array_num[i]].x
                 image_points[i][1] = ir_array.markers[next_array_num[i]].y
-
-            rvec, tvec = self.getPose(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_P3P)
+            rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((4,1,2)), cv2.SOLVEPNP_AP3P)
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
-            print 'P3P'
+            print 'AP3P'
         
         elif num >= 5:
             object_points = np.zeros((num, 3))
@@ -61,8 +103,7 @@ class GateDetector():
                 object_points[i][2] = self.gate_location[gate_id-1][marker_id-1][2]
                 image_points[i][0] = ir_array.markers[i].x
                 image_points[i][1] = ir_array.markers[i].y
-
-            rvec, tvec = self.getPose(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_EPNP)
+            rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_EPNP)
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
@@ -74,7 +115,7 @@ class GateDetector():
         return i
 
 
-    def getPose(self, object_points, image_points, method):
+    def getPosePnP(self, object_points, image_points, method):
         ret, rvec, tvec = cv2.solvePnP(object_points, image_points, self.camera_matrix, None, flags=method)
         return np.array(rvec), np.array(tvec)
 
@@ -116,7 +157,8 @@ class GateDetector():
 
 
     def setState(self, rvec, tvec):
-        R = self.rodrigues2rotation(rvec)
+        R = cv2.Rodrigues(rvec)[0]
+        #R = self.rodrigues2rotation(rvec)
         t = np.dot(-R.T, tvec)
         
         (pi, theta, psi) = self.rotation2euler(R.T)
@@ -161,8 +203,9 @@ class GateDetector():
             for j in range(0, 4):
                 for k in range(0, 3):
                     self.gate_location[i][j][k] = location[j][k]
+        self.next_gate = 0
 
-        rospy.Subscriber('/next_destination', Int32, self.next_cb)
+        rospy.Subscriber('/gate_number', String, self.next_cb)
         rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
         self.pub_pose = rospy.Publisher('/estimator/ir_pose', Pose, queue_size=10)
