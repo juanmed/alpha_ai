@@ -1,1 +1,10 @@
-{Result: Interrupted}
+<<<<<<< HEAD
+{Result: Collision}
+=======
+Gate0:
+  Location: [17.559397471120764, 3.47996666218753, 7.06585471173757]
+  Name: Gate10
+  Success: 'True'
+  Time: 8.713544454999997
+Result: Collision
+>>>>>>> 8a45afc4325ba628348c7235dcd6c65dbb5db721
