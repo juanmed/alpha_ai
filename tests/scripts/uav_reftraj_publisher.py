@@ -79,12 +79,9 @@ class Trajectory_Generator():
         for i in range(self.gate_count):
             self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
 
-        self.total_time = 30
-        self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
-
         self.t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
-        #self.t = np.array(self.t) * 40
-        #self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8, 
+        # self.t = np.array(self.t) * 40
+        # self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8,
         #            5.0, 5.05, 5.1, 5.3, 5.35, 5.4, 5.6, 5.65, 5.7, 5.9, 5.95, 6, 6.3, 6.35, 6.4,
         #             6.7, 6.75, 8]
         self.t = np.array(self.t) * 9
@@ -95,12 +92,10 @@ class Trajectory_Generator():
         self.current_acc = np.array([0, 0, 0, 0])
         self.current_jerk = np.array([0, 0, 0, 0])
         self.current_snap = np.array([0, 0, 0, 0])
-        self.current_state = np.vstack((self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
+        self.current_state = np.vstack(
+            (self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
 
-        # compute flat output trajectory
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe, self.current_state)
-        # draw trajectory in plot
-        #draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+        self.sol_x = 0
 
         # for counting gate
         self.passed_gate = 0
@@ -112,6 +107,16 @@ class Trajectory_Generator():
 
         # start in trajectory from 1st gate to 2nd gate
         self.i = 0
+
+    def compute_polynomial(self):
+        #self.total_time = 30
+        #self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
+
+        # compute flat output trajectory
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe,
+                                             self.current_state)
+        # draw trajectory in plot
+        # draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
 
     def compute_reference_traj(self, time):
         ref_time = time - self.start_time
@@ -327,6 +332,9 @@ def pub_traj():
 
     # subscribe state
     rospy.Subscriber('/estimator/state', UAV_state, traj_gen.current_state_update)
+
+    # compute polynomial!!
+    traj_gen.compute_polynomial()
 
     # IMPORTANT WAIT TIME!
     # If this is not here, the "start_time" in the trajectory generator is 
