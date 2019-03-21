@@ -37,47 +37,9 @@ class GateDetector():
                 next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
                 next_array_num[next_cnt] = i
                 next_cnt += 1
-	if self.next_gate == 0:
-            print "Not defined."
-        else:
-            print "Next gate: ", self.next_gate, next_cnt
-	'''
-        if next_cnt == 4:
-            dst_points = np.zeros((4, 2))
-            object_points = np.zeros((4, 3))
-            image_points = np.zeros((4, 2))
-            for i in range(0, 4):
-                object_points[i][0] = self.gate_location[self.next_gate-1][next_marker[i]-1][0]
-                object_points[i][1] = self.gate_location[self.next_gate-1][next_marker[i]-1][1]
-                object_points[i][2] = self.gate_location[self.next_gate-1][next_marker[i]-1][2]
-                image_points[i][0] = ir_array.markers[next_array_num[i]].x
-                image_points[i][1] = ir_array.markers[next_array_num[i]].y
-            tx = object_points[0][0]
-            ty = object_points[0][1]
-            tz = object_points[0][2]
-            object_points[:, 0] = object_points[:, 0] - tx
-            object_points[:, 1] = object_points[:, 1] - ty
-            object_points[:, 2] = object_points[:, 2] - tz
-            rot = atan2((object_points[1][1]+object_points[2][1]+object_points[3][1])/2, (object_points[1][0]+object_points[2][0]+object_points[3][0])/2)
-            rot_mat = np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]])
-            flat_points = np.dot(rot_mat, object_points.T)
-            #src_points = np.delete(np.dot(np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]]), object_points.T).T, 1, axis=1)
-            Rwf = np.array([[-1, 0, 0], [0, 0, -1], [0, -1, 0]])
-            src_points = np.dot(Rwf, flat_points).T #np.array([flat_points[0, :], flat_points[2, :]]).T
-
-            H, status = cv2.findHomography(src_points[:, 0:2], image_points, method=0)
-            rt = np.dot(np.linalg.inv(self.camera_matrix), H)
-            R = np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]))).reshape(3, 3).T
-            t = rt[:, 2]
-            Rt = np.insert(np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]), t)).reshape(4, 3).T, 3, [0, 0, 0, 1], axis=0)
-
-            RRR = np.linalg.multi_dot([R.T, Rwf.T, rot_mat.T])
-            print self.rotation2euler(RRR)
-
-            #print np.dot(np.linalg.inv(self.camera_matrix), np.vstack((image_points.T, [1, 1, 1, 1])))
-            #print np.dot(np.dot(self.camera_matrix, rt), np.vstack((src_points.T, [1, 1, 1, 1])))
-            #print image_points
-    '''
+        
+        print "Next gate: ", self.next_gate, next_cnt
+        
         if next_cnt == 4:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -92,7 +54,8 @@ class GateDetector():
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
-        elif num >= 5:
+        
+        elif num >= 8:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
             for i in range(0, num):

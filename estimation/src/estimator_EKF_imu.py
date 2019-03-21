@@ -339,13 +339,6 @@ class KalmanFilter():
             self.x_est = self.x_pre + np.dot(self.K, self.z[3:9, :] - self.hx[3:9, :])
             #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre)
             self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[3:9, :])).T]) + multi_dot([self.K, self.R[3:9, 3:9], self.K.T])
-#        else:
-#            print 'IMU'
-#            self.K = multi_dot([self.P_pre, self.H[9:, :].T, inv(multi_dot([self.H[9:, :], self.P_pre, self.H[9:, :].T]) + self.R[9:, 9:])])
-#            self.hx = self.gethx(self.x_pre)
-#            self.x_est = self.x_pre + np.dot(self.K, self.z[9:, :] - self.hx[9:, :])
-#            #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre)
-#            self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
         else:
             print 'IMU'
             self.x_est = self.x_pre
