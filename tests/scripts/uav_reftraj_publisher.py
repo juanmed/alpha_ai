@@ -87,7 +87,7 @@ class Trajectory_Generator():
         #self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8, 
         #            5.0, 5.05, 5.1, 5.3, 5.35, 5.4, 5.6, 5.65, 5.7, 5.9, 5.95, 6, 6.3, 6.35, 6.4,
         #             6.7, 6.75, 8]
-        self.t = np.array(self.t) * 9
+        self.t = np.array(self.t) * 40
 
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = np.array([0, 0, 0, 0])  # x y z psi
