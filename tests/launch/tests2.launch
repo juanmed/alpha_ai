@@ -1,9 +1,11 @@
 <launch>
 
 		<!-- Set Parameters. Wait times per node to wait for simulator -->
-		<param name="riseq/trajectory_wait" value="12" type="int" />
-		<param name="riseq/estimator_wait" value="10" type="int" />
-		<param name="riseq/control_wait" value="11" type="int" />
+		<param name="riseq/trajectory_wait" value="1" type="int" />
+		<param name="riseq/estimator_wait" value="1" type="int" />
+		<param name="riseq/control_wait" value="1" type="int" />
+  		<param name="riseq/perception_wait" value="1" type="int"/>
+  		<param name="riseq/control_type" value="geometric" type="str"/>
 
 		<!-- Start nodes -->
 		<node pkg="tests" name="uav_posestamped_publisher" type="uav_poseStamped_publisher.py"/>

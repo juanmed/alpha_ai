@@ -48,7 +48,16 @@ class uav_Input_Publisher():
 
         # filter messages based on time
         ts = message_filters.ApproximateTimeSynchronizer([self.state_sub, self.reftraj_sub],10,0.005)
-        ts.registerCallback(self.pid_controller)
+        
+        # select controller to call
+        self.control_type = rospy.get_param("riseq/control_type")
+        if( self.control_type == "pid" ):
+            ts.registerCallback(self.pid_controller)
+        elif( self.control_type == "geometric" ):
+            ts.registerCallback(self.geometric_controller)
+        else:
+            # default to pid
+            ts.registerCallback(self.pid_controller)
 
         self.m = rospy.get_param("/uav/flightgoggles_uav_dynamics/vehicle_mass")
 
@@ -75,7 +84,7 @@ class uav_Input_Publisher():
         # get controller gains with Pole Placement Method
         self.Kt, self.N_ut, self.N_xt = lqrg.calculate_pp_gains(lqrg.At, lqrg.Bt, lqrg.Ct, lqrg.D_, self.dpt)
         self.Kr, self.N_ur, self.N_xr = lqrg.calculate_pp_gains(lqrg.Ar, lqrg.Br, lqrg.Cr, lqrg.D_, self.dpr)
-
+        print("Kr {}".format(self.Kr))
 
         # compute maximum control outputs for saturation
         self.thrust_coeff = rospy.get_param("/uav/flightgoggles_uav_dynamics/thrust_coefficient")
@@ -98,12 +107,13 @@ class uav_Input_Publisher():
 
         # Orientation control feedback gains
         self.Katt = np.zeros((3,4))
-        self.Katt[0][1] = 0.3
-        self.Katt[1][2] = 0.3
-        self.Katt[2][3] = 0.3
+        self.Katt[0][1] = 1.0
+        self.Katt[1][2] = 1.0
+        self.Katt[2][3] = 1.0
 
         # Angular velocity control feedback gain
-        self.Kw = np.diag([1.0,1.0,1.0])
+        self.Kw = np.diag([2.0,2.0,2.0])
+        self.Ko = np.diag([8.0,8.0,8.0])
 
 
         # 
@@ -651,7 +661,6 @@ class uav_Input_Publisher():
             # Rbw.T*Rbw_des  because iff Rbw = Rbw_des, then Rbw.T*Rbw_des = I_3
 
 
-            self.w_b_des = np.dot(Rbw.T, np.dot(Rbw_ref,w_b_r))
 
             Kp = np.diag([lqrg.Kp1, lqrg.Kp1, lqrg.Kp1])
             Kd = np.diag([lqrg.Kd1, lqrg.Kd1, lqrg.Kd1])
@@ -683,6 +692,13 @@ class uav_Input_Publisher():
 
         w_b_e = w_b - np.dot(self.Rbw_des.T, np.dot(Rbw_ref, w_b_r))
 
+
+        self.w_b_des = -1.0*np.dot(self.Kw, np.dot(Rbw.T, np.dot(Rbw_ref,w_b_r)))
+
+        or_e = 0.5*self.vex( (np.dot(self.Rbw_des.T,Rbw) - np.dot(Rbw.T,self.Rbw_des)) )
+        or_e = -1.0*np.dot(self.Ko, or_e)
+
+
         # compute feedback angular velocity
         w_fb = self.get_wdes_3(Rbw, self.Rbw_des, self.Katt)
 
@@ -700,9 +716,9 @@ class uav_Input_Publisher():
         rt_msg.header.stamp = rospy.Time.now()
         rt_msg.header.frame_id = 'uav/imu'
 
-        rt_msg.angular_rates.x =  w_fb[0][0]  #self.w_b_in[0][0]  + w_b_r[0][0]
-        rt_msg.angular_rates.y =  w_fb[1][0]  #self.w_b_in[1][0]  + w_b_r[1][0]
-        rt_msg.angular_rates.z =  w_fb[2][0]  #self.w_b_in[2][0]  + w_b_r[2][0]
+        rt_msg.angular_rates.x =  w_fb[0][0] #+ or_e[0][0]  #self.w_b_in[0][0]  + w_b_r[0][0]
+        rt_msg.angular_rates.y =  w_fb[1][0] #+ or_e[1][0] #self.w_b_in[1][0]  + w_b_r[1][0]
+        rt_msg.angular_rates.z =  w_fb[2][0] #+ or_e[2][0] #self.w_b_in[2][0]  + w_b_r[2][0]
 
         rt_msg.thrust.x = 0.0
         rt_msg.thrust.y = 0.0
@@ -810,7 +826,7 @@ class uav_Input_Publisher():
         q_des = Quaternion(q_des)
         # calculate orientation error
         q_e = 1.0*q_des.inverse * q
-        q_e = np.array( [ [q_e[0]], [q_e[1]], [q_e[2]], [q_e[3]]] ) # back to np.array ....
+        q_e = np.array( [ [q_e[0]], [q_e[1]], [q_e[2]], [q_e[3]]] )/self.pos_loop_freq # back to np.array ....
         w_fb = 2.0*np.dot(Kp,q_e)
         # calculate angular velocity depending on value of quaternion's real part
         #if(q_e[0] >= 0.0):
