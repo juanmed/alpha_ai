@@ -28,18 +28,20 @@ class GateDetector():
         next_marker = [0, 0, 0, 0]
         next_array_num = [0, 0, 0, 0]
         num = len(ir_array.markers)
-        print "Detected IR markers: ", num
+        #print "Detected IR markers: ", num
         
         for i in range(0, num):
             if self.getID(ir_array.markers[i].landmarkID) == self.next_gate:
                 next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
                 next_array_num[next_cnt] = i
                 next_cnt += 1
-        if self.next_gate == 0:
+        '''
+	if self.next_gate == 0:
             print "Not defined."
         else:
             print "Next gate: ", self.next_gate, next_cnt
-        '''
+	'''        
+	'''
         if next_cnt == 4:
             dst_points = np.zeros((4, 2))
             object_points = np.zeros((4, 3))
@@ -107,7 +109,7 @@ class GateDetector():
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
-            print 'EPNP'
+            #print 'EPNP'
 
 
     def getID(self, landmarkID):
