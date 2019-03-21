@@ -28,9 +28,11 @@ class GateDetector():
         next_marker = [0, 0, 0, 0]
         next_array_num = [0, 0, 0, 0]
         num = len(ir_array.markers)
+        nnum = 0
         print "Detected IR markers: ", num
-        
         for i in range(0, num):
+            if self.gate_perturbation[self.getID(ir_array.markers[i].landmarkID)] <= 1.0:
+                nnum += 1
             if self.getID(ir_array.markers[i].landmarkID) == self.next_gate:
                 next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
                 next_array_num[next_cnt] = i
@@ -39,44 +41,7 @@ class GateDetector():
             print "Not defined."
         else:
             print "Next gate: ", self.next_gate, next_cnt
-        '''
-        if next_cnt == 4:
-            dst_points = np.zeros((4, 2))
-            object_points = np.zeros((4, 3))
-            image_points = np.zeros((4, 2))
-            for i in range(0, 4):
-                object_points[i][0] = self.gate_location[self.next_gate-1][next_marker[i]-1][0]
-                object_points[i][1] = self.gate_location[self.next_gate-1][next_marker[i]-1][1]
-                object_points[i][2] = self.gate_location[self.next_gate-1][next_marker[i]-1][2]
-                image_points[i][0] = ir_array.markers[next_array_num[i]].x
-                image_points[i][1] = ir_array.markers[next_array_num[i]].y
-            tx = object_points[0][0]
-            ty = object_points[0][1]
-            tz = object_points[0][2]
-            object_points[:, 0] = object_points[:, 0] - tx
-            object_points[:, 1] = object_points[:, 1] - ty
-            object_points[:, 2] = object_points[:, 2] - tz
-            rot = atan2((object_points[1][1]+object_points[2][1]+object_points[3][1])/2, (object_points[1][0]+object_points[2][0]+object_points[3][0])/2)
-            rot_mat = np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]])
-            flat_points = np.dot(rot_mat, object_points.T)
-            #src_points = np.delete(np.dot(np.array([[cos(rot), sin(rot), 0], [-sin(rot), cos(rot), 0], [0, 0, 1]]), object_points.T).T, 1, axis=1)
-            Rwf = np.array([[-1, 0, 0], [0, 0, -1], [0, -1, 0]])
-            src_points = np.dot(Rwf, flat_points).T #np.array([flat_points[0, :], flat_points[2, :]]).T
-
-            H, status = cv2.findHomography(src_points[:, 0:2], image_points, method=0)
-            rt = np.dot(np.linalg.inv(self.camera_matrix), H)
-            R = np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]))).reshape(3, 3).T
-            t = rt[:, 2]
-            Rt = np.insert(np.hstack((rt[:, 0], rt[:, 1], np.cross(rt[:, 0], rt[:, 1]), t)).reshape(4, 3).T, 3, [0, 0, 0, 1], axis=0)
-
-            RRR = np.linalg.multi_dot([R.T, Rwf.T, rot_mat.T])
-            print self.rotation2euler(RRR)
-
-            #print np.dot(np.linalg.inv(self.camera_matrix), np.vstack((image_points.T, [1, 1, 1, 1])))
-            #print np.dot(np.dot(self.camera_matrix, rt), np.vstack((src_points.T, [1, 1, 1, 1])))
-            #print image_points
-        '''
-        '''
+        
         if next_cnt == 4:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -87,14 +52,15 @@ class GateDetector():
                 image_points[i][0] = ir_array.markers[next_array_num[i]].x
                 image_points[i][1] = ir_array.markers[next_array_num[i]].y
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((4,1,2)), cv2.SOLVEPNP_AP3P)
+            print 'AP3P'
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
-            print 'AP3P'
-        '''
-        if num >= 5:
+        
+        elif num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
+            j = 0
             for i in range(0, num):
                 gate_id = self.getID(ir_array.markers[i].landmarkID)
                 marker_id = self.getID(ir_array.markers[i].markerID)
@@ -104,10 +70,34 @@ class GateDetector():
                 image_points[i][0] = ir_array.markers[i].x
                 image_points[i][1] = ir_array.markers[i].y
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_EPNP)
+            print 'EPNP'
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
+        '''
+        elif nnum >= 5:
+            object_points = np.zeros((nnum, 3))
+            image_points = np.zeros((nnum, 2))
+            j = 0
+            for i in range(0, num):
+                gate_id = self.getID(ir_array.markers[i].landmarkID)
+                marker_id = self.getID(ir_array.markers[i].markerID)
+                if self.gate_perturbation[gate_id] <= 1.0:
+                    object_points[j][0] = self.gate_location[gate_id-1][marker_id-1][0]
+                    object_points[j][1] = self.gate_location[gate_id-1][marker_id-1][1]
+                    object_points[j][2] = self.gate_location[gate_id-1][marker_id-1][2]
+                    image_points[j][0] = ir_array.markers[i].x
+                    image_points[j][1] = ir_array.markers[i].y
+                    j += 1
+            rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((nnum,1,2)), cv2.SOLVEPNP_EPNP)
             print 'EPNP'
+            self.setState(rvec, tvec)
+            self.pub_pose.publish(self.state)
+            self.pub_attitude.publish(self.euler)
+        '''
+        if self.velocity_tf is True:
+            self.pub_velocity.publish(self.velocity)
+            self.velocity_tf = False
 
 
     def getID(self, landmarkID):
@@ -165,9 +155,9 @@ class GateDetector():
         psi_r = psi + np.pi/2
         (qw, qx, qy, qz) = self.euler2quaternion(pi_r, theta_r, psi_r)
 
-        self.state.position.x = t[0][0]
-        self.state.position.y = t[1][0]
-        self.state.position.z = t[2][0]
+        self.state.position.x = (1-self.alpha)*self.x_backup + self.alpha*t[0][0]
+        self.state.position.y = (1-self.alpha)*self.y_backup + self.alpha*t[1][0]
+        self.state.position.z = (1-self.alpha)*self.z_backup + self.alpha*t[2][0]
         self.state.orientation.x = qx
         self.state.orientation.y = qy
         self.state.orientation.z = qz
@@ -185,16 +175,25 @@ class GateDetector():
         self.rate = 10
         self.r = rospy.Rate(self.rate)
 
+        self.alpha = 1.0
+        self.x_backup = 0.0
+        self.y_backup = 0.0
+        self.z_backup = 0.0
+        self.velocity_tf = False
+
         self.camera_matrix = np.array([[548.4088134765625, 0.0, 512.0],
                                        [0.0, 548.4088134765625, 384.0],
                                        [0.0, 0.0, 1.0]])
         max_gate = 23
         self.gate_location = np.zeros((max_gate+1, 4, 3))
+        self.gate_perturbation = np.zeros(max_gate+1)
         for i in range(0, max_gate):
             location = rospy.get_param('/uav/Gate' + str(i+1) + '/nominal_location')
+            perturbation = rospy.get_param('/uav/Gate' + str(i+1) + '/perturbation_bound')
             for j in range(0, 4):
                 for k in range(0, 3):
                     self.gate_location[i][j][k] = location[j][k]
+                    self.gate_perturbation[i] = perturbation[0] + perturbation[1] + perturbation[2]
         self.next_gate = self.getID(rospy.get_param("/uav/gate_names")[0])
 
         rospy.Subscriber('/gate_number', String, self.next_cb)
@@ -216,21 +215,21 @@ class GateDetector():
         self.y_tmp = self.init_pose[1]
         self.z_tmp = self.init_pose[2]
 
-        self.limit_acc = 20
+        self.limit_vel = 5
 
 
     def loop(self):
-        self.x_tmp, self.state.position.x
         self.velocity.x = (self.state.position.x - self.x_tmp) * self.rate
         self.velocity.y = (self.state.position.y - self.y_tmp) * self.rate
         self.velocity.z = (self.state.position.z - self.z_tmp) * self.rate
-        if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) < self.limit_acc:
-            self.pub_velocity.publish(self.velocity)
+        if sqrt((self.velocity.x-self.velocity_tmp.x)**2 + (self.velocity.y-self.velocity_tmp.y)**2 + (self.velocity.z-self.velocity_tmp.z)**2) < self.limit_vel:
             self.velocity_tmp = self.velocity
+            self.velocity_tf = True
 
         self.x_tmp = self.state.position.x
         self.y_tmp = self.state.position.y
         self.z_tmp = self.state.position.z
+
         self.r.sleep()
 
 

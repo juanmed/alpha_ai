@@ -183,14 +183,9 @@ class KalmanFilter():
 
     def setState(self):
         self.state.header.stamp = rospy.Time.now()
-        if abs(self.state.pose.position.x - self.x_backup) > 1 or abs(self.state.pose.position.y - self.y_backup) > 1 or abs(self.state.pose.position.z - self.z_backup) > 1:
-            self.state.pose.position.x = self.x_backup
-            self.state.pose.position.y = self.y_backup
-            self.state.pose.position.z = self.z_backup
-        else:
-            self.state.pose.position.x = (1-self.alpha)*self.x_backup + self.alpha*self.x_est[0][0]
-            self.state.pose.position.y = (1-self.alpha)*self.y_backup + self.alpha*self.x_est[1][0]
-            self.state.pose.position.z = (1-self.alpha)*self.z_backup + self.alpha*self.x_est[2][0]
+        self.state.pose.position.x = (1-self.alpha)*self.x_backup + self.alpha*self.x_est[0][0]
+        self.state.pose.position.y = (1-self.alpha)*self.y_backup + self.alpha*self.x_est[1][0]
+        self.state.pose.position.z = (1-self.alpha)*self.z_backup + self.alpha*self.x_est[2][0]
         self.state.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
         self.state.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
         self.state.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
@@ -268,15 +263,15 @@ class KalmanFilter():
                            [0, 0, 0, 0, 0, 0, 0, 0, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0]])
         
-        self.R = np.array([[0.0001, 0, 0, 0, 0, 0, 0, 0, 0, 0],             # ir marker
-                           [0, 0.0001, 0, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0.0001, 0, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0.00001, 0, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0.00001, 0, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0.00001, 0, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0, 0.00001, 0, 0, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0.00001, 0, 0],
-                           [0, 0, 0, 0, 0, 0, 0, 0, 0.00001, 0],
+        self.R = np.array([[0.001, 0, 0, 0, 0, 0, 0, 0, 0, 0],             # ir marker
+                           [0, 0.001, 0, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0.001, 0, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0.0001, 0, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0.0001, 0, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0.0001, 0, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0.0001, 0, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0.0001, 0, 0],
+                           [0, 0, 0, 0, 0, 0, 0, 0, 0.0001, 0],
                            [0, 0, 0, 0, 0, 0, 0, 0, 0, self.range_var]])   # rangefinder
 
         self.P_pre = np.eye(9)*0.001
@@ -298,6 +293,7 @@ class KalmanFilter():
         self.x_est[3][0] = atan2(2*(qw*qx+qy*qz), 1-2*(pow(qx, 2)+pow(qy, 2)))
         self.x_est[4][0] = asin(2*(qw*qy-qz*qx))
         self.x_est[5][0] = atan2(2*(qw*qz+qx*qy), 1-2*(pow(qy, 2)+pow(qz, 2)))
+        print self.x_est
 
         self.ir_velocity_tf = False
         self.ir_pose_tf = False
