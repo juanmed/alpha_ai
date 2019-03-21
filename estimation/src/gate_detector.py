@@ -158,7 +158,6 @@ class GateDetector():
 
     def setState(self, rvec, tvec):
         R = cv2.Rodrigues(rvec)[0]
-        #R = self.rodrigues2rotation(rvec)
         t = np.dot(-R.T, tvec)
         
         (pi, theta, psi) = self.rotation2euler(R.T)
