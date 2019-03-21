@@ -28,13 +28,8 @@ class GateDetector():
         next_marker = [0, 0, 0, 0]
         next_array_num = [0, 0, 0, 0]
         num = len(ir_array.markers)
-<<<<<<< HEAD
-        #print "Detected IR markers: ", num
-        
-=======
         nnum = 0
         print "Detected IR markers: ", num
->>>>>>> 38beb01564eb4e126b5f599e8c493750628b695f
         for i in range(0, num):
             if self.gate_perturbation[self.getID(ir_array.markers[i].landmarkID)] <= 1.0:
                 nnum += 1
@@ -42,13 +37,10 @@ class GateDetector():
                 next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
                 next_array_num[next_cnt] = i
                 next_cnt += 1
-        '''
 	if self.next_gate == 0:
             print "Not defined."
         else:
             print "Next gate: ", self.next_gate, next_cnt
-<<<<<<< HEAD
-	'''        
 	'''
         if next_cnt == 4:
             dst_points = np.zeros((4, 2))
@@ -85,11 +77,7 @@ class GateDetector():
             #print np.dot(np.linalg.inv(self.camera_matrix), np.vstack((image_points.T, [1, 1, 1, 1])))
             #print np.dot(np.dot(self.camera_matrix, rt), np.vstack((src_points.T, [1, 1, 1, 1])))
             #print image_points
-        '''
-        '''
-=======
-        
->>>>>>> 38beb01564eb4e126b5f599e8c493750628b695f
+    '''
         if next_cnt == 4:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -104,11 +92,9 @@ class GateDetector():
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
-        
         elif num >= 5:
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
-            j = 0
             for i in range(0, num):
                 gate_id = self.getID(ir_array.markers[i].landmarkID)
                 marker_id = self.getID(ir_array.markers[i].markerID)
@@ -122,9 +108,6 @@ class GateDetector():
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
-<<<<<<< HEAD
-            #print 'EPNP'
-=======
         '''
         elif nnum >= 5:
             object_points = np.zeros((nnum, 3))
@@ -149,7 +132,6 @@ class GateDetector():
         if self.velocity_tf is True:
             self.pub_velocity.publish(self.velocity)
             self.velocity_tf = False
->>>>>>> 38beb01564eb4e126b5f599e8c493750628b695f
 
 
     def getID(self, landmarkID):
