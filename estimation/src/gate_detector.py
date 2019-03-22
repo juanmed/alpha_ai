@@ -14,7 +14,6 @@ from sensor_msgs.msg import CameraInfo
 from flightgoggles.msg import IRMarker, IRMarkerArray
 from tests.msg import UAV_state
 
-
 class GateDetector():
     def camera_info_cb(self, camera_info):
         self.camera_matrix = np.array(camera_info.K).reshape(3, 3)
@@ -35,6 +34,7 @@ class GateDetector():
                 next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
                 next_array_num[next_cnt] = i
                 next_cnt += 1
+        '''
         if next_cnt == 4 and self.gate_perturbation[self.next_gate-1] != 0:
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -55,7 +55,7 @@ class GateDetector():
                 next_marker[next_cnt] = self.getID(ir_array.markers[i].markerID)
                 next_array_num[next_cnt] = i
                 next_cnt += 1
-
+        '''
         print "Detected IR markers:", num, nnum
         if nnum >= 5:
             object_points = np.zeros((nnum, 3))
@@ -128,6 +128,14 @@ class GateDetector():
         self.drone_orientation[1] = state.pose.orientation.y
         self.drone_orientation[2] = state.pose.orientation.z
         self.drone_orientation[3] = state.pose.orientation.w
+
+    def gate_cb(self, gate_array):
+        num = len(gate_array.markers)
+        for i in range(0, num):
+            self.gate_location[gate_array.markers[i].landmarkID-1][self.getID(ir_array.markers[i].markerID)-1][0] = gate_array.markers[i].x
+            self.gate_location[gate_array.markers[i].landmarkID-1][self.getID(ir_array.markers[i].markerID)-1][1] = gate_array.markers[i].y
+            self.gate_location[gate_array.markers[i].landmarkID-1][self.getID(ir_array.markers[i].markerID)-1][2] = gate_array.markers[i].z
+            self.gate_perturbation[gate_array.markers[i].landmarkID-1] = 0
 
     def getID(self, landmarkID):
         i = int(re.findall("\d+", str(landmarkID))[0])
@@ -205,7 +213,7 @@ class GateDetector():
         self.x_backup = self.state.position.x
         self.y_backup = self.state.position.y
         self.z_backup = self.state.position.z
-
+    '''
     def setGateState(self, rvec, tvec, gate):
         print self.gate_location[gate-1]
         R = cv2.Rodrigues(rvec)[0]
@@ -222,7 +230,7 @@ class GateDetector():
         theta_r = -pi - np.pi/2
         psi_r = psi + np.pi/2
         (qw, qx, qy, qz) = self.euler2quaternion(pi_r, theta_r, psi_r)
-        '''
+        
         Gate = np.zeros((3, 1))
         for i in range(0, 4):
             Gate[0][0] += (self.gate_location[gate-1][i][0] - t[0][0]) / 4
@@ -233,10 +241,9 @@ class GateDetector():
             self.gate_location[gate-1][i][1] = self.drone_position[1] + g[0]
             self.gate_location[gate-1][i][2] = self.drone_position[2] + g[2]
         self.gate_perturbation[gate-1] = 0
-        '''
-        print self.gate_location[gate-1]
         
-
+        print self.gate_location[gate-1]
+    '''
     def __init__(self):
         rospy.init_node('ir_detector')
         self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
@@ -263,6 +270,8 @@ class GateDetector():
         rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
         rospy.Subscriber('/estimator/state', UAV_state, self.state_cb)
+        rospy.Subscriber('/modified_gate', IRMarkerArray, self.gate_cb)
+
         self.pub_pose = rospy.Publisher('/estimator/ir_pose', Pose, queue_size=10)
         self.pub_velocity = rospy.Publisher('/estimator/ir_velocity', Vector3, queue_size=10)
         self.pub_attitude = rospy.Publisher('/estimator/ir_euler', Vector3, queue_size=10)
@@ -291,7 +300,6 @@ class GateDetector():
         self.velocity_tf = False
         self.limit_acc = 5
 
-
     def loop(self):
         self.velocity.x = (self.state.position.x - self.x_tmp) * self.rate
         self.velocity.y = (self.state.position.y - self.y_tmp) * self.rate
@@ -308,9 +316,8 @@ class GateDetector():
 
         self.r.sleep()
 
-
 if __name__ == "__main__":
-    print("OpenCV: " + cv2.__version__)
+    #print("OpenCV: " + cv2.__version__)
     gate_detector = GateDetector()
     while not rospy.is_shutdown():
         gate_detector.loop()
