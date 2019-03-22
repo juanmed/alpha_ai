@@ -3,3 +3,4 @@ CMakeLists.txt
 tests/scripts/.idea/*
 tests/scripts/trajectory/.idea/*
 **/*.csv
+results/*
