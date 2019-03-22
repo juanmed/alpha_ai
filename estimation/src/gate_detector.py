@@ -72,7 +72,7 @@ class GateDetector():
                     image_points[j][1] = ir_array.markers[i].y
                     j += 1
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:, :2]).reshape((nnum, 1, 2)), cv2.SOLVEPNP_EPNP)
-            # print 'EPNP'
+            print 'EPNP'
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
@@ -80,7 +80,8 @@ class GateDetector():
                 self.pub_velocity.publish(self.velocity)
                 self.velocity_tf = False
 
-        elif (next_cnt == 4) and (self.gate_perturbation[self.next_gate-1] == 0):
+        #elif (next_cnt == 4) and (self.gate_perturbation[self.next_gate-1] == 0):
+        elif next_cnt == 4:
             print "Next gate:", self.next_gate, next_cnt
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
@@ -92,7 +93,7 @@ class GateDetector():
                 image_points[i][1] = ir_array.markers[next_array_num[i]].y
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(
                 image_points[:, :2]).reshape((4, 1, 2)), cv2.SOLVEPNP_AP3P)
-            # print 'AP3P'
+            print 'AP3P'
             self.setState(rvec, tvec)
             self.pub_attitude.publish(self.euler)
             self.pub_velocity.publish(self.velocity)
