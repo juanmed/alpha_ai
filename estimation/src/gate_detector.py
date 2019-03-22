@@ -51,7 +51,6 @@ class GateDetector():
                 image_points[i][0] = ir_array.markers[next_array_num[i]].x
                 image_points[i][1] = ir_array.markers[next_array_num[i]].y
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((4,1,2)), cv2.SOLVEPNP_AP3P)
-            print 'AP3P'
             self.setGateState(rvec, tvec, self.next_gate)
             if self.velocity_tf is True:
                 self.pub_pose.publish(self.state)
@@ -94,10 +93,17 @@ class GateDetector():
                     image_points[j][1] = ir_array.markers[i].y
                     j += 1
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((nnum,1,2)), cv2.SOLVEPNP_EPNP)
-            print 'EPNP'
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
+
+
+    def perturbation_cb(self, gate):
+        for i in range(0, 4):
+            self.gate_location[gate.id-1][gate.marker[i]-1][0] = gate.perturbation[i][0]
+            self.gate_location[gate.id-1][gate.marker[i]-1][1] = gate.perturbation[i][1]
+            self.gate_location[gate.id-1][gate.marker[i]-1][2] = gate.perturbation[i][2]
+        self.gate_perturbation[gate.id-1] = 0.0
 
 
     def getID(self, landmarkID):
@@ -115,14 +121,14 @@ class GateDetector():
                          [v[2], 0, -v[0]],
                          [-v[1], v[0], 0]])
 
-
+    
     def rotation2quaternion(self, R):
         qw = sqrt(1 + R[0][0] + R[1][1] + R[2][2]) / 2
         qx = (R[2][1] - R[1][2]) / (4*qw)
         qy = (R[0][2] - R[2][0]) / (4*qw)
         qz = (R[1][0] - R[0][1]) / (4*qw)
         return qw, qx, qy, qz
-
+    
 
     def rotation2euler(self, R):
         pi = atan2(R[2][1], R[2][2])
@@ -245,7 +251,7 @@ class GateDetector():
         self.vy_tmp = 0.0
         self.vz_tmp = 0.0
 
-        self.limit_vel = 3
+        self.limit_vel = 5
 
 
     def loop(self):
