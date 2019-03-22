@@ -55,7 +55,7 @@ class Trajectory_Generator():
 
         # set time segment
         self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
-        self.init_t = np.array(self.init_t) * 15
+        self.init_t = np.array(self.init_t) * 40
         self.new_t = self.init_t
         #self.new_t = [0, 15]
 

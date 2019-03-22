@@ -30,14 +30,9 @@ class uav_Input_Publisher():
         self.reftraj_sub = message_filters.Subscriber('/uav_ref_trajectory', UAV_traj)
 
         # Switch between modes
-<<<<<<< HEAD
-        self.mode = 2   # 1: use true state,  2: use estimated state
-        if( self.mode == 1):
-=======
         self.mode = rospy.get_param("riseq/control_mode")   # 1: use true state,  2: use estimated state
+        
         if( self.mode == "true_state"):
->>>>>>> d2006cf551156f0a36be8e0ab4ade99b947698e0
-
 
             # create message message_filter
             self.state_sub = message_filters.Subscriber('/uav_state', UAV_state)
