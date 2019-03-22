@@ -160,7 +160,7 @@ class Gate_Pose_Estimator():
         # Calculate gate pose using pnp algorithm
         # The returned rotation matrix R, and translation t are from the Drone's camera frame
         # to the Gate Frameself.
-        R_bg, t_bg = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
+        R_gd, t_gd = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
 
         # translation from drone to gate
         t_dg = np.zeros_like(t_gd)
