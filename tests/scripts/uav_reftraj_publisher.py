@@ -58,6 +58,7 @@ class Trajectory_Generator():
         self.init_t = np.array(self.init_t) * 40
         self.new_t = self.init_t
 
+
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = self.keyframe[0]  # x y z psi
         self.current_vel = np.array([0, 0, 0, 0])  # for now in our system, we can only get velocity from estimation

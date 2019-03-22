@@ -11,6 +11,7 @@ from utils import *
 from flightgoggles.msg import IRMarker, IRMarkerArray
 from std_msgs.msg import String
 from perception.msg import GatePoseArray, GatePose
+from tests.msg import UAV_state
 
 
 class Gate_Pose_Estimator():
@@ -25,6 +26,7 @@ class Gate_Pose_Estimator():
 
         # subscribe to IR Marker topic
         rospy.Subscriber("/uav/camera/left/ir_beacons", IRMarkerArray, self.read_estimate_publish)
+        rospy.Subscriber("/estimator/state", UAV_state, self.update_drone_pose)
 
         self.gates = {}
 
@@ -33,6 +35,13 @@ class Gate_Pose_Estimator():
         self.camera_intrinsic[0] = np.array([548.4088134765625, 0.0, 512.0])
         self.camera_intrinsic[1] = np.array([0.0, 548.4088134765625, 384.0])
         self.camera_intrinsic[2] = np.array([0.0, 0.0, 1.0])
+
+        self.gates_global_pose = {}
+        self.gates_perturbation = {}
+
+        # store drone position
+        self.drone_position = np.zeros((3,1))
+        self.drone_orientation = np.zeros(4)
 
 
 
@@ -63,9 +72,14 @@ class Gate_Pose_Estimator():
             # if 3 markers are present, is enough for P3P 
             markers = self.gates[gate_name]
             if( len(markers) > 3):
-                #print("**{} has {} visible points".format(gate_name, len(markers)) )
+                print("**{} has {} visible points".format(gate_name, len(markers)) )
                 # get quaternion and translation: drone frame to gate frame
-                q_dg, t_dg = self.estimate_gate_pose(gate_name, markers)
+                R_dg, q_dg, t_dg = self.estimate_gate_pose(gate_name, markers)
+
+                # estimate global location of current gate
+                R_wg, t_wg = self.estimate_gate_global(R_dg, t_dg)
+                #print("Rotation World -> Body: \n{}".format(R_wg))
+                #print("Translation World -> Body: \n{}".format(t_wg))
 
                 gate_pose_msg = GatePose()
                 gate_pose_msg.gate_name = gate_name
@@ -85,6 +99,8 @@ class Gate_Pose_Estimator():
                 #print("{} has {} visible points".format(gate_name, len(markers)))
                 continue
 
+            # Calculate perturbation
+
         # Prepare and send list of gate poses 
         gate_poses_msg = GatePoseArray()
         gate_poses_msg.header.stamp = rospy.Time.now()
@@ -93,7 +109,6 @@ class Gate_Pose_Estimator():
 
         self.gate_publisher.publish(gate_poses_msg)
         rospy.loginfo(gate_poses_msg)
-
 
     def estimate_gate_pose(self, gate_name, markers):
 
@@ -120,18 +135,19 @@ class Gate_Pose_Estimator():
         origin_z_global = np.mean(gate_markers_3d_global[:,2])
         gate_origin_global = np.array([origin_x_global, origin_y_global, origin_z_global])
 
-        # compute poisition of markers in gate's local coordinate
-        # where gate center is at 0,0,0
+        # compute poisition of markers in gate's local coordinate where gate center is at 0,0,0
         gate_markers_3d_local = np.zeros_like(gate_markers_3d_global)
         for marker in range(gate_markers_3d_local.shape[0]):
             gate_markers_3d_local[marker] = gate_markers_3d_global[marker] - gate_origin_global
-            gate_markers_3d_local[marker] = gate_markers_3d_global[marker] - gate_origin_global      
+            #gate_markers_3d_local[marker] = gate_markers_3d_global[marker] - gate_origin_global      
 
+        print(gate_markers_3d_local)
 
-        #print(gate_name)
-        #print(gate_origin_global)
-        #print(gate_markers_3d_local)
+        #############################################################
+        #   HERE ESTIMATE MARKERS FOR GATES THAT HAVE 3 OR LESS MARKERS
+        #############################################################
 
+        # order by markerID
         markers.sort()
         #extrack markers
         points_2D = np.zeros((len(markers),2))
@@ -142,16 +158,18 @@ class Gate_Pose_Estimator():
         #print("Points 2D: {}".format(points_2D))
 
         # Calculate gate pose using pnp algorithm
-        # The returned rotation matrix R, and translation t are from the Gate frame
-        # to the Drone, and Z,Y axis are interchanged
-        R_gd, t_gd = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
+        # The returned rotation matrix R, and translation t are from the Drone's camera frame
+        # to the Gate Frameself.
+        R_bg, t_bg = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
 
         # translation from drone to gate
         t_dg = np.zeros_like(t_gd)
-        t_dg[0][0] = t_gd[0][0]
-        t_dg[1][0] = t_gd[2][0]
-        t_dg[2][0] = t_gd[1][0]
-        t_dg = -t_dg
+        print("t_gd before {}".format(t_gd))
+        t_gd = -t_gd
+        t_dg[0][0] = t_gd[2][0]
+        t_dg[1][0] = -t_gd[0][0]
+        t_dg[2][0] = -t_gd[1][0]
+        #t_dg = -t_dg
 
         # Rotation from drone to gate
         R = R_gd.T
@@ -163,19 +181,49 @@ class Gate_Pose_Estimator():
         dummy1 = np.zeros((3,1))
         dummy2 = np.zeros((1,4))
         dummy2[0][3] = 1.0
+        R_dg_temp = R_dg.copy()
         R_dg = np.concatenate((R_dg,dummy1), axis = 1)
         R_dg = np.concatenate((R_dg, dummy2), axis = 0)
         
         q_dg = tf.transformations.quaternion_from_matrix(R_dg)
-
+        psi, theta, phi = tf.transformations.euler_from_quaternion(q_dg, axes = 'rzyx')
+        print("psi {:.2f} theta {:.2f} phi {:.2f}".format(psi*180/np.pi, theta*180/np.pi, phi*180/np.pi))
         #print("Rotation Drone -> Gate : {}".format(q_dg))
         #print("Translation Drone -> Gate : {}".format(t_dg))
 
-        return q_dg, t_dg
+        return R_dg_temp, q_dg, t_dg
+
+    # use drone's global pose and gate pose in drone frame to
+    # estimate gate pose in global frame
+    def estimate_gate_global(self, R_dg, t_dg):
 
 
+        R_wd = tf.transformations.quaternion_matrix(self.drone_orientation.tolist())
+        R_wd = R_wd[0:3,0:3]  # extract rotation part only from homogeneous transform
 
+        R_dw = R_wd.T # get body to world frame rotation
 
+        w_t_dg = np.dot(R_dw,t_dg) # 
+
+        t_wg = self.drone_position + w_t_dg # get translation from world to gate frame
+
+        R_wg = np.dot(R_dg,R_wd)
+
+        return R_wg, t_wg
+
+    def estimate_perturbation_4(self, gate_name, t_real):
+        return 0
+
+    def update_drone_pose(self, state_msg):
+
+        self.drone_position[0][0] = state_msg.pose.position.x
+        self.drone_position[1][0] = state_msg.pose.position.y
+        self.drone_position[2][0] = state_msg.pose.position.z
+
+        self.drone_orientation[0] = state_msg.pose.orientation.x
+        self.drone_orientation[1] = state_msg.pose.orientation.y
+        self.drone_orientation[2] = state_msg.pose.orientation.z
+        self.drone_orientation[3] = state_msg.pose.orientation.w
 
     def get_init_pose(self):
         init_pose = rospy.get_param("/uav/flightgoggles_uav_dynamics/init_pose")
