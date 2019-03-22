@@ -1,4 +1,11 @@
 <launch>
+	    <!-- Set Parameters. Wait times per node to wait for simulator -->
+	        <param name="riseq/trajectory_wait" value="1" type="int" />
+	        <param name="riseq/estimator_wait" value="1" type="int" />
+                <param name="riseq/control_wait" value="1" type="int" />
+  		<param name="riseq/perception_wait" value="1" type="int"/>
+  		<param name="riseq/control_type" value="pid" type="str"/>
+
 		<!-- example of comment tag -->
 
 	    <!-- True State Node -->
