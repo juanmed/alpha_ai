@@ -29,7 +29,6 @@ class GateDetector():
         next_array_num = [0, 0, 0, 0]
         num = len(ir_array.markers)
         nnum = 0
-        #print "Detected IR markers: ", num
         for i in range(0, num):
             if self.gate_perturbation[self.getID(ir_array.markers[i].landmarkID)] <= 1.0:
                 nnum += 1
@@ -38,9 +37,11 @@ class GateDetector():
                 next_array_num[next_cnt] = i
                 next_cnt += 1
         
-        #print "Next gate: ", self.next_gate, next_cnt
+        print "Detected IR markers: ", num
+        print "Detected IR global markers", nnum
+        print "Next gate: ", self.next_gate, next_cnt
         
-        if next_cnt == 4:
+        if next_cnt == 4:   # using 4 markers of the next gate on one plane
             object_points = np.zeros((4, 3))
             image_points = np.zeros((4, 2))
             for i in range(0, 4):
@@ -51,9 +52,14 @@ class GateDetector():
                 image_points[i][1] = ir_array.markers[next_array_num[i]].y
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((4,1,2)), cv2.SOLVEPNP_AP3P)
             print 'AP3P'
-            self.setState(rvec, tvec)
-        
-        elif num >= 5:
+            self.setGateState(rvec, tvec, self.next_gate)
+            if self.velocity_tf is True:
+                self.pub_pose.publish(self.state)
+                self.pub_attitude.publish(self.euler)
+                self.pub_velocity.publish(self.velocity)
+                self.velocity_tf = False
+        '''
+        elif num >= 5:  # every points
             object_points = np.zeros((num, 3))
             image_points = np.zeros((num, 2))
             for i in range(0, num):
@@ -67,8 +73,13 @@ class GateDetector():
             rvec, tvec = self.getPosePnP(object_points, np.ascontiguousarray(image_points[:,:2]).reshape((num,1,2)), cv2.SOLVEPNP_EPNP)
             print 'EPNP'
             self.setState(rvec, tvec)
+            if self.velocity_tf is True:
+                self.pub_pose.publish(self.state)
+                self.pub_attitude.publish(self.euler)
+                self.pub_velocity.publish(self.velocity)
+                self.velocity_tf = False
         '''
-        elif nnum >= 5:
+        if nnum >= 4:
             object_points = np.zeros((nnum, 3))
             image_points = np.zeros((nnum, 2))
             j = 0
@@ -87,12 +98,6 @@ class GateDetector():
             self.setState(rvec, tvec)
             self.pub_pose.publish(self.state)
             self.pub_attitude.publish(self.euler)
-        '''
-        if self.velocity_tf is True:
-            self.pub_pose.publish(self.state)
-            self.pub_attitude.publish(self.euler)
-            self.pub_velocity.publish(self.velocity)
-            self.velocity_tf = False
 
 
     def getID(self, landmarkID):
@@ -167,6 +172,30 @@ class GateDetector():
         self.z_backup = self.state.position.z
 
 
+    def setGateState(self, rvec, tvec, gate):
+        R = cv2.Rodrigues(rvec)[0]
+        t = np.dot(-R.T, tvec)
+        
+        (pi, theta, psi) = self.rotation2euler(R.T)
+        while pi+np.pi/2 > np.pi:
+            pi = pi - 2*np.pi
+        while theta+np.pi*2 > np.pi:
+            theta = theta - 2*np.pi
+        while psi+np.pi/2 > np.pi:
+            psi = psi - 2*np.pi
+        pi_r = theta + np.pi*2
+        theta_r = -pi - np.pi/2
+        psi_r = psi + np.pi/2
+        (qw, qx, qy, qz) = self.euler2quaternion(pi_r, theta_r, psi_r)
+
+        Gate = np.zeros((4, 3))
+        for i in range(0, 4):
+            Gate[i][0] = t[0][0] - self.gate_location[gate-1][i][0]
+            Gate[i][1] = t[1][0] - self.gate_location[gate-1][i][1]
+            Gate[i][2] = t[2][0] - self.gate_location[gate-1][i][2]
+        print Gate
+
+
     def __init__(self):
         rospy.init_node('ir_detector')
         self.init_pose = rospy.get_param('/uav/flightgoggles_uav_dynamics/init_pose')
@@ -174,7 +203,7 @@ class GateDetector():
         self.rate = 10
         self.r = rospy.Rate(self.rate)
 
-        self.alpha = 0.2
+        self.alpha = 0.8
         self.x_backup = 0.0
         self.y_backup = 0.0
         self.z_backup = 0.0
@@ -216,7 +245,7 @@ class GateDetector():
         self.vy_tmp = 0.0
         self.vz_tmp = 0.0
 
-        self.limit_vel = 5
+        self.limit_vel = 3
 
 
     def loop(self):
