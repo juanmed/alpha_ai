@@ -56,11 +56,12 @@ class Trajectory_Generator():
         '''
         self.gate_name = parameter.gate_name
         self.gate_count = len(self.gate_name)
-        self.init_pose = parameter.init_pose
+        #self.init_pose = parameter.init_pose
 
         self.gate_location_cls = get_gate_location.GateLocation()
         self.keyframe_cls = keyframe_generation.KeyframeGeneration()
-
+        self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count, self.gate_name)
+        '''
         if self.level is True:
             # get gate location
             self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count, self.gate_name)
@@ -73,7 +74,7 @@ class Trajectory_Generator():
             # generate keyframe
             is_quaternion = False
             self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
-
+        '''
         # for counting gates
         self.gates = []
         for i in range(self.gate_count):
@@ -84,7 +85,8 @@ class Trajectory_Generator():
         # self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8,
         #            5.0, 5.05, 5.1, 5.3, 5.35, 5.4, 5.6, 5.65, 5.7, 5.9, 5.95, 6, 6.3, 6.35, 6.4,
         #             6.7, 6.75, 8]
-        self.t = np.array(self.t) * 9
+        self.t = np.array(self.t) * 25
+
 
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = np.array([0, 0, 0, 0])  # x y z psi
@@ -143,11 +145,21 @@ class Trajectory_Generator():
         #self.current_snap = np.array(current_snap)
         self.current_state = np.vstack((self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
 
+        self.init_pose = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z,
+                            msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
+            # get gate location
+        self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count, self.gate_name)
+            # generate keyframe
+        is_quaternion = True
+        self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion,
+                                                                                 self.gate_location, self.gate_count)
+
+        #print self.init_pose
         if self.passed_gate < len(self.gate_name):
             self.check_gate()
-            print "%d gate pass" % self.passed_gate
         else:
-            print "almost finish!!"
+            pass
+
     # checking whether drone pass gate or not
     # It needs current position of drone.
     def check_gate(self):
@@ -309,7 +321,146 @@ class Trajectory_Generator2():
 
         return waypoints  
 
+'''
+class Trajectory_Generator3():
+    def __init__(self):
 
+        self.gate_pub = rospy.Publisher('gate_number', String, queue_size=10)
+        self.level = True
+
+        # init parameters
+        self.order = 10
+        self.n = 4
+
+        self.inflation = 2
+        self.tolerance = 1
+
+        self.gate_name = parameter.gate_name
+        self.gate_count = len(self.gate_name)
+        self.init_pose = parameter.init_pose
+
+        self.gate_location_cls = get_gate_location.GateLocation()
+        self.keyframe_cls = keyframe_generation.KeyframeGeneration()
+        self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count, self.gate_name)
+        is_quaternion = True
+        self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion, self.gate_location, self.gate_count)
+
+        # for counting gates
+        self.gates = []
+        for i in range(self.gate_count):
+            self.gates.append(gate_event.GateEvent(self.gate_location[i], self.inflation))
+            
+        self.t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
+        # self.t = np.array(self.t) * 40
+        # self.t = [0, 2, 2.1, 2.2, 3.2, 3.3, 3.4, 4.0, 4.05, 4.1, 4.4, 4.45, 4.5, 4.7, 4.75, 4.8,
+        #            5.0, 5.05, 5.1, 5.3, 5.35, 5.4, 5.6, 5.65, 5.7, 5.9, 5.95, 6, 6.3, 6.35, 6.4,
+        #             6.7, 6.75, 8]
+        self.t = np.array(self.t) * 40
+
+        # current state(pos, vel, acc, jerk, snap)
+        self.current_pos = np.array([0, 0, 0, 0])  # x y z psi
+        self.current_vel = np.array([0, 0, 0, 0])  # for now in our system, we can only get velocity from estimation
+        self.current_acc = np.array([0, 0, 0, 0])
+        self.current_jerk = np.array([0, 0, 0, 0])
+        self.current_snap = np.array([0, 0, 0, 0])
+        self.current_state = np.vstack(
+            (self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
+
+        self.sol_x = 0
+
+        # for counting gate
+        self.passed_gate = 0
+
+        # initialize time
+        self.init_time = rospy.get_time()
+        self.last_time = rospy.get_time()
+        self.start_time = self.last_time
+
+        # start in trajectory from 1st gate to 2nd gate
+        self.i = 0
+
+    def keyframe_from_IR(self, msg):
+
+    def compute_polynomial(self):
+        # self.total_time = 30
+        # self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint, self.total_time)
+
+        # compute flat output trajectory
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.t, self.keyframe,
+                                             self.current_state)
+        # draw trajectory in plot
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.t, self.keyframe)
+
+    def compute_reference_traj(self, time):
+        ref_time = time - self.start_time
+        x = self.sol_x[self.n * (self.order + 1) * self.i: self.n * (self.order + 1) * (self.i + 1)]
+        flatout_trajectory = compute_trajectory.compute_trajectory(x, self.order, ref_time)
+        ref_trajectory = df_flat.compute_ref(flatout_trajectory)
+
+        if (time - self.last_time) > (self.t[self.i + 1] - self.t[self.i]):
+            # print time
+            self.i = self.i + 1  # trajectory to next gate
+            self.last_time = time
+
+        if self.i == self.waypoint - 1:
+            print ("Total time: {}".format(time - self.init_time))
+            exit()
+
+        return ref_trajectory
+
+    def current_state_update(self, msg):
+        self.current_pos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z, 0])
+        # self.current_vel = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z])
+        # self.current_acc = np.array(current_acc)
+        # self.current_jerk = np.array(current_jerk)
+        # self.current_snap = np.array(current_snap)
+        self.current_state = np.vstack(
+            (self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
+        if self.i == 0:
+            self.init_pose = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z,
+                              msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z,
+                              msg.pose.orientation.w]
+            # get gate location
+            self.gate_location = self.gate_location_cls.get_gate_location(self.level, self.gate_count,
+                                                                          self.gate_name)
+            # generate keyframe
+            is_quaternion = True
+            self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, is_quaternion,
+                                                                                 self.gate_location,
+                                                                                 self.gate_count)
+
+        if self.passed_gate < len(self.gate_name):
+            self.check_gate()
+            print "%d gate pass" % self.passed_gate
+        else:
+            print "almost finish!!"
+
+    # checking whether drone pass gate or not
+    # It needs current position of drone.
+    def check_gate(self):
+        if self.gates[self.passed_gate].isEvent(self.current_state[0], self.tolerance):
+            self.passed_gate = self.passed_gate + 1
+        self.gate_pub.publish(self.gate_name[self.passed_gate])
+
+    # keyframe and trajectory update
+    # It needs current position of drone.
+    # Also need current vel, acc, jerk, snap from flatout trajectory
+    def trajectory_update(self, pass_time):
+        # delete previous pose and gate location which was passed before.
+        # delete 3 * gate because we add before and after gate.
+        for i in range(0, 3 * self.passed_gate + 1):
+            self.keyframe = np.delete(self.keyframe, 0, axis=0)
+
+        # add current pose at keyframe
+        self.keyframe = np.vstack((self.current_state[0], self.keyframe))
+
+        # update time
+        self.t = optimal_time.compute_optimal_time(self.keyframe, self.waypoint - self.passed_gate,
+                                                   self.total_time - pass_time)
+
+        # compute flat output trajectory
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint - self.passed_gate, self.t, self.keyframe, self.current_state)
+'''
 def pub_traj():
     # create topic for publishing ref trajectory
     traj_publisher = rospy.Publisher('uav_ref_trajectory', UAV_traj, queue_size=10)
@@ -333,6 +484,7 @@ def pub_traj():
     # subscribe state
     rospy.Subscriber('/estimator/state', UAV_state, traj_gen.current_state_update)
 
+    rospy.sleep(0.1)
     # compute polynomial!!
     traj_gen.compute_polynomial()
 
@@ -371,7 +523,7 @@ def pub_traj():
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
             Rbw = np.array(ref_traj[9]).flatten().tolist()
-            print("ref_traj[9]: {}".format(ref_traj[9]))
+            #print("ref_traj[9]: {}".format(ref_traj[9]))
 
             # Input (T, M) publisher to be used in estimation
             u_1 = np.array(ref_traj[7]).flatten()
@@ -419,7 +571,7 @@ def pub_traj():
 
             # publish message
             traj_publisher.publish(traj)
-            rospy.loginfo(traj)
+            #rospy.loginfo(traj)
             rate.sleep()
 
 

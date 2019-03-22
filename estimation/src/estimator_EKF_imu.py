@@ -183,14 +183,9 @@ class KalmanFilter():
 
     def setState(self):
         self.state.header.stamp = rospy.Time.now()
-        if abs(self.state.pose.position.x - self.x_backup) > 1 or abs(self.state.pose.position.y - self.y_backup) > 1 or abs(self.state.pose.position.z - self.z_backup) > 1:
-            self.state.pose.position.x = self.x_backup
-            self.state.pose.position.y = self.y_backup
-            self.state.pose.position.z = self.z_backup
-        else:
-            self.state.pose.position.x = (1-self.alpha)*self.x_backup + self.alpha*self.x_est[0][0]
-            self.state.pose.position.y = (1-self.alpha)*self.y_backup + self.alpha*self.x_est[1][0]
-            self.state.pose.position.z = (1-self.alpha)*self.z_backup + self.alpha*self.x_est[2][0]
+        self.state.pose.position.x = (1-self.alpha)*self.x_backup + self.alpha*self.x_est[0][0]
+        self.state.pose.position.y = (1-self.alpha)*self.y_backup + self.alpha*self.x_est[1][0]
+        self.state.pose.position.z = (1-self.alpha)*self.z_backup + self.alpha*self.x_est[2][0]
         self.state.pose.orientation.x = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2) - cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2)
         self.state.pose.orientation.y = sin(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) + cos(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
         self.state.pose.orientation.z = cos(self.x_est[3][0]/2)*cos(self.x_est[4][0]/2)*sin(self.x_est[5][0]/2) - sin(self.x_est[3][0]/2)*sin(self.x_est[4][0]/2)*cos(self.x_est[5][0]/2)
@@ -343,13 +338,6 @@ class KalmanFilter():
             self.x_est = self.x_pre + np.dot(self.K, self.z[3:9, :] - self.hx[3:9, :])
             #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre)
             self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[3:9, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[3:9, :])).T]) + multi_dot([self.K, self.R[3:9, 3:9], self.K.T])
-#        else:
-#            print 'IMU'
-#            self.K = multi_dot([self.P_pre, self.H[9:, :].T, inv(multi_dot([self.H[9:, :], self.P_pre, self.H[9:, :].T]) + self.R[9:, 9:])])
-#            self.hx = self.gethx(self.x_pre)
-#            self.x_est = self.x_pre + np.dot(self.K, self.z[9:, :] - self.hx[9:, :])
-#            #self.P_est = np.dot(np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre)
-#            self.P_est = multi_dot([np.eye(9)-np.dot(self.K, self.H[9:, :]), self.P_pre, (np.eye(9)-np.dot(self.K, self.H[9:, :])).T]) + multi_dot([self.K, self.R[9:, 9:], self.K.T])
         else:
             print 'IMU'
             self.x_est = self.x_pre
