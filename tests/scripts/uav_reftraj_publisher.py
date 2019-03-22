@@ -57,7 +57,7 @@ class Trajectory_Generator():
         self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
         self.init_t = np.array(self.init_t) * 15
         self.new_t = self.init_t
-        self.new_t = [0, 15]
+        #self.new_t = [0, 15]
 
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = self.keyframe[0]  # x y z psi
@@ -69,7 +69,7 @@ class Trajectory_Generator():
             (self.current_pos, self.current_vel, self.current_acc, self.current_jerk, self.current_snap))
 
         # This is solution for piecewise polynomial
-        self.sol_x = qp_solution.qp_solution(self.order, self.n, 2, self.new_t, self.keyframe,
+        self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.new_t, self.keyframe,
                                              self.current_state)
         # draw trajectory in plot
         #draw_trajectory.draw_trajectory(self.sol_x, self.order, 2, self.n, self.new_t, self.keyframe)
@@ -91,10 +91,10 @@ class Trajectory_Generator():
         self.i = 0
 
     def compute_reference_traj(self, time):
-        #ref_time = time - self.start_time
-        #x = self.sol_x[self.n*(self.order+1)*self.i: self.n*(self.order+1)*(self.i+1)]
-        ref_time = time - self.last_time
-        x = self.sol_x[self.n * (self.order + 1) * 0: self.n * (self.order + 1) * (0 + 1)]
+        ref_time = time - self.start_time
+        x = self.sol_x[self.n*(self.order+1)*self.i: self.n*(self.order+1)*(self.i+1)]
+        #ref_time = time - self.last_time
+        #x = self.sol_x[self.n * (self.order + 1) * 0: self.n * (self.order + 1) * (0 + 1)]
         flatout_trajectory = compute_trajectory.compute_trajectory(x, self.order, ref_time)
         ref_trajectory = df_flat.compute_ref(flatout_trajectory)
 
@@ -104,12 +104,12 @@ class Trajectory_Generator():
         # self.current_jerk = np.append(flatout_trajectory[3], 0)
         # self.current_snap = np.append(flatout_trajectory[4], 0)
 
-        #if (time - self.last_time) > (self.init_t[self.i+1] - self.init_t[self.i]):
-        if (time - self.last_time) > self.new_t[1] - self.new_t[0]:
+        if (time - self.last_time) > (self.init_t[self.i+1] - self.init_t[self.i]):
+        #if (time - self.last_time) > self.new_t[1] - self.new_t[0]:
             #print time
             self.i = self.i + 1   # trajectory to next gate
             self.last_time = time
-            self.trajectory_update()
+            #self.trajectory_update()
 
         if self.i == self.waypoint - 1:
             print ("Total time: {}".format(time-self.start_time))
