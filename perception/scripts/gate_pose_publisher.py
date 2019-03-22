@@ -22,7 +22,8 @@ class Gate_Pose_Estimator():
         self.init_pos, self.init_ori = self.get_init_pose()
 
         # publisher
-        self.gate_publisher = rospy.Publisher("/riseq/perception/gate_poses", GatePoseArray, queue_size = 10)
+        self.gate_pose_publisher = rospy.Publisher("/riseq/perception/gate_poses", GatePoseArray, queue_size = 10)
+        self.gate_marker_publisher = rospy.Publisher("/riseq/perception/marker_global_poses", IRMarkerArray, queue_size = 10)
 
         # subscribe to IR Marker topic
         rospy.Subscriber("/uav/camera/left/ir_beacons", IRMarkerArray, self.read_estimate_publish)
@@ -107,7 +108,7 @@ class Gate_Pose_Estimator():
         gate_poses_msg.header.frame_id = "uav/gates"
         gate_poses_msg.gate_poses = gate_poses
 
-        self.gate_publisher.publish(gate_poses_msg)
+        self.gate_pose_publisher.publish(gate_poses_msg)
         rospy.loginfo(gate_poses_msg)
 
     def estimate_gate_pose(self, gate_name, markers):
@@ -160,38 +161,40 @@ class Gate_Pose_Estimator():
         # Calculate gate pose using pnp algorithm
         # The returned rotation matrix R, and translation t are from the Drone's camera frame
         # to the Gate Frameself.
-        R_bg, t_bg = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
+        R_gc, t_cg = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
 
-        # translation from drone to gate
-        t_dg = np.zeros_like(t_gd)
-        print("t_gd before {}".format(t_gd))
-        t_gd = -t_gd
-        t_dg[0][0] = t_gd[2][0]
-        t_dg[1][0] = -t_gd[0][0]
-        t_dg[2][0] = -t_gd[1][0]
-        #t_dg = -t_dg
+        R_cg = R_gc.T
 
-        # Rotation from drone to gate
-        R = R_gd.T
-        R_dg = np.zeros_like(R)
-        R_dg[:,0] = R[:,0]
-        R_dg[:,1] = R[:,2]
-        R_dg[:,2] = R[:,1]
+        # convert from camera frame to body frame
+        t_bg = np.zeros_like(t_cg)
+        print("t_cg before {}".format(t_cg))
+        t_bg[0][0] = t_cg[2][0]
+        t_bg[1][0] = -t_cg[0][0]
+        t_bg[2][0] = -t_cg[1][0]
+
+        # Rotation from body frame to gate frame
+        R_gb = np.zeros_like(R_gc)
+        R_gb[:,0] = R_gc[:,1]
+        R_gb[:,1] = -R_gc[:,0]
+        R_gb[:,2] = R_gc[:,2]
+
+        # Rotation from body to gate
+        R_bg = R_gb.T
 
         dummy1 = np.zeros((3,1))
         dummy2 = np.zeros((1,4))
         dummy2[0][3] = 1.0
-        R_dg_temp = R_dg.copy()
-        R_dg = np.concatenate((R_dg,dummy1), axis = 1)
-        R_dg = np.concatenate((R_dg, dummy2), axis = 0)
+        R_bg_temp = R_bg.copy()
+        R_bg = np.concatenate((R_cg,dummy1), axis = 1)
+        R_bg = np.concatenate((R_bg, dummy2), axis = 0)
         
-        q_dg = tf.transformations.quaternion_from_matrix(R_dg)
-        psi, theta, phi = tf.transformations.euler_from_quaternion(q_dg, axes = 'rzyx')
+        q_bg = tf.transformations.quaternion_from_matrix(R_bg)
+        psi, theta, phi = tf.transformations.euler_from_quaternion(q_bg, axes = 'rzyx')
         print("psi {:.2f} theta {:.2f} phi {:.2f}".format(psi*180/np.pi, theta*180/np.pi, phi*180/np.pi))
         #print("Rotation Drone -> Gate : {}".format(q_dg))
         #print("Translation Drone -> Gate : {}".format(t_dg))
 
-        return R_dg_temp, q_dg, t_dg
+        return R_bg_temp, q_bg, t_bg
 
     # use drone's global pose and gate pose in drone frame to
     # estimate gate pose in global frame
@@ -242,6 +245,8 @@ class Gate_Pose_Estimator():
         init_ori[3] = init_pose[6]
 
         return init_pose, init_ori
+
+
 
 if __name__ == '__main__':
     try:
