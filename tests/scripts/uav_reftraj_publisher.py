@@ -54,8 +54,8 @@ class Trajectory_Generator():
                                                                              self.gate_location, self.gate_count)
 
         # set time segment
-        self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
-        self.init_t = np.array(self.init_t) * 40
+        #self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
+        #self.init_t = np.array(self.init_t) * 40
         self.new_t = self.init_t
         #self.new_t = [0, 15]
 
@@ -272,7 +272,7 @@ class Trajectory_Generator2():
 
 
     def compute_reference_traj(self, time):
-        vel = 4
+        vel = 2
         trajectory_time = time - self.start_time
         #print("Time traj: {}".format(trajectory_time))
         flatout_trajectory = trajGen3D.generate_trajectory(trajectory_time, vel, self.waypoints, self.coeff_x, self.coeff_y, self.coeff_z)
@@ -307,7 +307,7 @@ class Trajectory_Generator2():
             waypoints[i+1][1] = gate_center[1]
             waypoints[i+1][2] = gate_center[2]
 
-        waypoints[waypoints.shape[0]-1][1] =  waypoints[waypoints.shape[0]-1][1] - 30
+        waypoints[waypoints.shape[0]-1][1] =  waypoints[waypoints.shape[0]-1][1] - 1
 
         return waypoints
 
@@ -343,8 +343,8 @@ def pub_traj():
     
 
     # create a trajectory generator
-    traj_gen = Trajectory_Generator()
-    # traj_gen = Trajectory_Generator2()
+    #traj_gen = Trajectory_Generator()
+    traj_gen = Trajectory_Generator2()
     # traj_gen = Trajectory_Generator_Test()
 
     rospy.sleep(0.1)
