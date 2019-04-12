@@ -55,8 +55,8 @@ class Trajectory_Generator():
                                                                              self.gate_location, self.gate_count)
 
         # set time segment
-        #self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
-        #self.init_t = np.array(self.init_t) * 40
+        self.init_t = [0, 0.9, 1.7, 2.5, 3.5] #, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
+        self.init_t = np.array(self.init_t) * 5
         self.new_t = self.init_t
         #self.new_t = [0, 15]
 
@@ -344,8 +344,8 @@ def pub_traj():
     
 
     # create a trajectory generator
-    #traj_gen = Trajectory_Generator()
-    traj_gen = Trajectory_Generator2()
+    traj_gen = Trajectory_Generator()
+    #traj_gen = Trajectory_Generator2()
     # traj_gen = Trajectory_Generator_Test()
 
     rospy.sleep(0.1)
@@ -370,12 +370,21 @@ def pub_traj():
             traj.header.stamp = rospy.Time.now()
             traj.header.frame_id = ""
 
-            # get all values... we need to do this becuase ref_traj contains old, ugly np.matrix
+            # get all values... we need to convert to np.array()
+            # becuase ref_traj contains old, ugly np.matrix
             # objects >:(
             x, y, z = np.array(ref_traj[0]).flatten()
-            phi, theta, psi = np.array(ref_traj[2]).flatten()
             vx, vy, vz = np.array(ref_traj[1]).flatten()
+            ax, ay, az = np.array(ref_traj[10]).flatten()
+            jx, jy, jz = np.array(ref_traj[11]).flatten()
+            sx, sy, sz = np.array(ref_traj[12]).flatten()
+
+            phi, theta, psi = np.array(ref_traj[2]).flatten()
             p, q, r = np.array(ref_traj[3]).flatten()
+            yaw = ref_traj[13].item(0)
+            yawdot = ref_traj[14].item(0)
+            yawddot = ref_traj[15].item(0)
+
             uax, uay, uaz = np.array(ref_traj[4]).flatten()
             ubx, uby, ubz = np.array(ref_traj[5]).flatten()
             ucx, ucy, ucz = np.array(ref_traj[6]).flatten()
@@ -426,9 +435,25 @@ def pub_traj():
 
             traj.rot = Rbw
 
+            traj.acc.x = ax 
+            traj.acc.y = ay
+            traj.acc.z = az
+
+            traj.jerk.x = jx
+            traj.jerk.y = jy
+            traj.jerk.z = jz
+
+            traj.snap.x = sx
+            traj.snap.y = sy
+            traj.snap.z = sz
+
+            traj.yaw = yaw
+            traj.yawdot = yawdot
+            traj.yawddot = yawddot
+
             # publish message
             traj_publisher.publish(traj)
-            #rospy.loginfo(traj)
+            rospy.loginfo(traj)
             rate.sleep()
 
             #traj_gen.trajectory_update(time)

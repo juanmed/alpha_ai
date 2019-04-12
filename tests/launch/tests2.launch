@@ -12,8 +12,8 @@
 		<!-- Start nodes -->
 		<node pkg="tests" name="uav_posestamped_publisher" type="uav_poseStamped_publisher.py"/>
 		<node pkg="tests" name="uav_state_publisher" type="uav_state_publisher.py"/>
-		<node pkg="tests" name="uav_trajectory_publisher" type="uav_reftraj_publisher.py"/>
-		<node pkg="tests" name="uav_input_publisher" type="uav_input_publisher.py" output="screen"/>
+		<node pkg="tests" name="uav_trajectory_publisher" type="uav_reftraj_publisher.py" output="screen"/>
+		<node pkg="tests" name="uav_input_publisher" type="uav_input_publisher.py"/>
 		<node pkg="tests" name="riseq_error_publisher" type="state_error_publisher.py"/>
 		<node pkg="rqt_plot" name="rqt_plot" type="rqt_plot"/>
 
