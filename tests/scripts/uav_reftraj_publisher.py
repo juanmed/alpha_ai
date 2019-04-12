@@ -27,7 +27,11 @@ import trajectory.calculate_length as calculate_length
 class Trajectory_Generator():
 
     def __init__(self):
-        self.level = True
+        self.mode = rospy.get_param("/uav/challenge_name", -1)
+        if self.mode != -1:
+            self.level = True
+        else:
+            self.level = False
 
         # init parameters
         self.order = 10
@@ -54,10 +58,19 @@ class Trajectory_Generator():
                                                                              self.gate_location, self.gate_count)
 
         # set time segment
-        self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
-        self.init_t = np.array(self.init_t) * 15
-        self.new_t = self.init_t
-        #self.new_t = [0, 15]
+        if self.mode == "Challenge easy":
+            self.new_t = [0, 5]
+            self.new_t = np.array(self.new_t)
+        elif self.mode == "Challenge Medium":
+            self.new_t = [0, 5, 10]
+            self.new_t = np.array(self.new_t)
+        elif self.mode == "Challenge Hard":
+            self.new_t = [0, 5, 10, 15, 20]
+            self.new_t = np.array(self.new_t)
+        else:
+            self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
+            self.init_t = np.array(self.init_t) * 15
+            self.new_t = self.init_t
 
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = self.keyframe[0]  # x y z psi
@@ -72,7 +85,7 @@ class Trajectory_Generator():
         self.sol_x = qp_solution.qp_solution(self.order, self.n, self.waypoint, self.new_t, self.keyframe,
                                              self.current_state)
         # draw trajectory in plot
-        #draw_trajectory.draw_trajectory(self.sol_x, self.order, 2, self.n, self.new_t, self.keyframe)
+        draw_trajectory.draw_trajectory(self.sol_x, self.order, self.waypoint, self.n, self.new_t, self.keyframe)
 
         # counting gate pass
         self.passed_gate = 0
