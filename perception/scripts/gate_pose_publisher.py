@@ -161,6 +161,7 @@ class Gate_Pose_Estimator():
         # Calculate gate pose using pnp algorithm
         # The returned rotation matrix R, and translation t are from the Drone's camera frame
         # to the Gate Frameself.
+<<<<<<< HEAD
         R_gc, t_cg = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
 
         R_cg = R_gc.T
@@ -180,6 +181,25 @@ class Gate_Pose_Estimator():
 
         # Rotation from body to gate
         R_bg = R_gb.T
+=======
+        R_gd, t_gd = pnp(gate_markers_3d_local, points_2D, self.camera_intrinsic)
+
+        # translation from drone to gate
+        t_dg = np.zeros_like(t_gd)
+        print("t_gd before {}".format(t_gd))
+        t_gd = -t_gd
+        t_dg[0][0] = t_gd[2][0]
+        t_dg[1][0] = -t_gd[0][0]
+        t_dg[2][0] = -t_gd[1][0]
+        #t_dg = -t_dg
+
+        # Rotation from drone to gate
+        R = R_gd.T
+        R_dg = np.zeros_like(R)
+        R_dg[:,0] = R[:,0]
+        R_dg[:,1] = R[:,2]
+        R_dg[:,2] = R[:,1]
+>>>>>>> master
 
         dummy1 = np.zeros((3,1))
         dummy2 = np.zeros((1,4))

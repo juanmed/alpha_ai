@@ -31,6 +31,7 @@ class uav_Input_Publisher():
 
         # Switch between modes
         self.mode = rospy.get_param("riseq/control_mode")   # 1: use true state,  2: use estimated state
+        
         if( self.mode == "true_state"):
 
             # create message message_filter
@@ -100,6 +101,7 @@ class uav_Input_Publisher():
         # slower than Orientation controller
         self.T = g
         self.Rbw_des = np.diag([1.0,1.0,1.0])
+        self.Rbw_ref_dot = np.diag([1.0, 1.0, 1.0])
         self.loops = 0
         self.w_b_des = np.zeros((3,1))
         self.w_b_in = np.zeros((3,1))
@@ -688,24 +690,25 @@ class uav_Input_Publisher():
 
         # Calculate input using Propietary method
         #self.w_b_in = self.get_wdes_1(Rbw, self.Rbw_des, self.w_b_des, self.Kw)             
-        self.w_b_in = self.get_wdes_2(Rbw, self.Rbw_des, self.Katt) 
+        #self.w_b_in = self.get_wdes_2(Rbw, self.Rbw_des, self.Katt) 
 
-        w_b_e = w_b - np.dot(self.Rbw_des.T, np.dot(Rbw_ref, w_b_r))
+        #w_b_e = w_b - np.dot(self.Rbw_des.T, np.dot(Rbw_ref, w_b_r))
 
 
-        self.w_b_des = -1.0*np.dot(self.Kw, np.dot(Rbw.T, np.dot(Rbw_ref,w_b_r)))
+        #self.w_b_des = -1.0*np.dot(self.Kw, np.dot(Rbw.T, np.dot(Rbw_ref,w_b_r)))
 
-        or_e = 0.5*self.vex( (np.dot(self.Rbw_des.T,Rbw) - np.dot(Rbw.T,self.Rbw_des)) )
-        or_e = -1.0*np.dot(self.Ko, or_e)
+        #or_e = 0.5*self.vex( (np.dot(self.Rbw_des.T,Rbw) - np.dot(Rbw.T,self.Rbw_des)) )
+        #or_e = -1.0*np.dot(self.Ko, or_e)
 
 
         # compute feedback angular velocity
-        w_fb = self.get_wdes_3(Rbw, self.Rbw_des, self.Katt)
+        self.Rbw_ref_dot = np.dot(Rbw_ref, self.hat(w_b_r))
+        w_fb = self.get_wdes_4(Rbw, self.Rbw_des, self.Rbw_ref_dot, w_b_r)
 
         delta_t = rospy.Time.now() - self.t1
         delta_t = delta_t.to_sec()
         print("Delta t: {}".format(delta_t))
-        w_fb = w_fb #/delta_t
+        #w_fb = w_fb / 1.0
 
 
         self.t1 = rospy.Time.now()
@@ -834,6 +837,49 @@ class uav_Input_Publisher():
         #else:
         #    w_fb = -2.0*np.dot(Kp,q_e)
         return w_fb
+
+    def get_wdes_4(self, Rbw, Rbw_des, Rbw_ref_dot, w_ref):
+        """
+        Calculation of desired angular velocity. See:
+
+        Pucci, D., Hamel, T., Morin, P., & Samson, C. (2014). 
+        Nonlinear Feedback Control of Axisymmetric Aerial Vehicles
+        https://arxiv.org/pdf/1403.5290.pdf
+
+        Kai, J. M., Allibert, G., Hua, M. D., & Hamel, T. (2017). 
+        Nonlinear feedback control of Quadrotors exploiting First-Order Drag Effects. 
+        IFAC-PapersOnLine, 50(1), 8189-8195. https://doi.org/10.1016/j.ifacol.2017.08.1267
+        """
+
+        # Thrust direction is the body Z axis
+        e3 = np.array([[0.0],[0.0],[1.0]])
+
+        # extract real and desired body Z axis
+        zb = np.dot(Rbw,e3)
+        zb_r = np.dot(Rbw_des,e3)
+        zb_r_dot = np.dot(Rbw_ref_dot, e3)
+
+        # Calculation of desired angular velocity is done by 3 terms: an error (or feedback) term,
+        # a feed-forward term and a term for the free degree of freedom of rotation around Z axis (Yaw)
+
+        # Feedback term calculation
+        k10 = 5.0
+        epsilon = 0.01
+        k1 = k10  #k10/(1.0 + np.dot(zb.T, zb_r)[0][0] + epsilon)
+        lambda_dot = 0.0
+        lambda_ = 5.0
+        w_fb = (k1 + lambda_dot/lambda_)*np.cross(zb, zb_r, axis= 0)
+
+        # Feed-forward term calculation
+        w_ff = 0.0*np.cross(zb_r, zb_r_dot, axis = 0)  #np.array([[0.0],[0.0],[0.0]])
+
+        # Yaw rotation
+        w_yaw = 0.0*np.dot(w_ref.T, zb)[0][0] * zb   # np.array([[0.0],[0.0],[0.0]])
+
+        # Convert to body frame
+        w_in = np.dot(Rbw.T,w_fb + w_ff + w_yaw)
+
+        return w_in
 
 
     # saturation function for scalars

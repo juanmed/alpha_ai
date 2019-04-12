@@ -45,8 +45,8 @@ def qp_solution(order, n, waypoint, t, keyframe, current_state):
 
     # check A,b and rank of A
 
-    print np.size(A)
-    print np.linalg.matrix_rank(A)
+    #print np.size(A)
+    #print np.linalg.matrix_rank(A)
 
     # quadratic programming
     #sol = solvers.qp(P, q, G1, h1, A, b)

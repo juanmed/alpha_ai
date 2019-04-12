@@ -5,7 +5,7 @@
 		<param name="riseq/estimator_wait" value="1" type="int" />
 		<param name="riseq/control_wait" value="1" type="int" />
   		<param name="riseq/perception_wait" value="1" type="int"/>
-  		<param name="riseq/control_type" value="pid" type="str"/>
+  		<param name="riseq/control_type" value="geometric" type="str"/>
   		<param name="riseq/control_mode" value="true_state" type="str"/>
 
 
