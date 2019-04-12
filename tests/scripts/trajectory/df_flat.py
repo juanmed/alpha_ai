@@ -283,11 +283,7 @@ def compute_ref(trajectory):
 
     # we send the received pos_traj, and vel_traj vectors as the reference pos and vel vectors
     # because that is the result from the differential flatness output selection
-
-    #return [pos_traj.T, vel_traj.T, or_, w_, acc_traj.T, w_dot_, u_c, u_1, u_x]
-
-    #return [pos_traj.T, vel_traj.T, or_, w_, u_a, u_b, u_c]
-    return [pos_traj.T, vel_traj.T, or_, w_, u_a, u_b, u_c, u_1, u_x, R_]
+    return [pos_traj.T, vel_traj.T, or_, w_, u_a, u_b, u_c, u_1, u_x, R_, acc_traj.T, jerk_traj.T, snap_traj.T, yaw_traj, yaw_dot_traj, yaw_ddot_traj]
 
 """
 # define constants

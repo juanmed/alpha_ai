@@ -5,14 +5,14 @@
 		<param name="riseq/estimator_wait" value="1" type="int" />
 		<param name="riseq/control_wait" value="1" type="int" />
   		<param name="riseq/perception_wait" value="1" type="int"/>
-  		<param name="riseq/control_type" value="pid" type="str"/>
+  		<param name="riseq/control_type" value="geometric" type="str"/>
   		<param name="riseq/control_mode" value="true_state" type="str"/>
 
 		<!-- Start nodes -->
 		<node pkg="tests" name="uav_posestamped_publisher" type="uav_poseStamped_publisher.py"/>
 		<node pkg="tests" name="uav_state_publisher" type="uav_state_publisher.py"/>
-		<node pkg="tests" name="uav_trajectory_publisher" type="uav_reftraj_publisher.py"/>
-		<node pkg="tests" name="uav_input_publisher" type="uav_input_publisher.py" output="screen"/>
+		<node pkg="tests" name="uav_trajectory_publisher" type="uav_reftraj_publisher.py" output="screen"/>
+		<node pkg="tests" name="uav_input_publisher" type="uav_input_publisher.py"/>
 		<node pkg="tests" name="riseq_error_publisher" type="state_error_publisher.py"/>
 		<node pkg="rqt_plot" name="rqt_plot" type="rqt_plot"/>
 

@@ -270,7 +270,7 @@ class GateDetector():
         rospy.Subscriber('/gate_number', String, self.next_cb)
         rospy.Subscriber('/uav/camera/left/camera_info', CameraInfo, self.camera_info_cb)
         rospy.Subscriber('/uav/camera/left/ir_beacons', IRMarkerArray, self.ir_cb)
-        rospy.Subscriber('/estimator/state', UAV_state, self.state_cb)
+        #rospy.Subscriber('/estimator/state', UAV_state, self.state_cb)
         rospy.Subscriber('/modified_gate', IRMarkerArray, self.gate_cb)
 
         self.pub_pose = rospy.Publisher('/estimator/ir_pose', Pose, queue_size=10)

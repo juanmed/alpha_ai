@@ -31,13 +31,12 @@
   <param name="riseq/control_wait" value="40" type="int" />
   <param name="riseq/perception_wait" value="5" type="int"/>
   <param name="riseq/control_type" value="pid" type="str" />
-  <param name="riseq/control_mode" value="true_state" type="str" />
+  <param name="riseq/control_mode" value="estimated_state" type="str" />
   
   <!-- RISE-Q Nodes -->
   <node ns="estimator" name="EKF" pkg="estimation" type="estimator_EKF_imu.py" />
   <node ns="estimator" name="lpf" pkg="estimation" type="LPF_imu.py" />
   <node ns="estimator" name="ir_detector" pkg="estimation" type="gate_detector.py"/>
-  <node pkg="tests" name="uav_posestamped_publisher" type="uav_poseStamped_publisher.py"/>
   <node pkg="tests" name="uav_state_publisher" type="uav_state_publisher.py"/>
   <node pkg="tests" name="uav_trajectory_publisher" type="uav_reftraj_publisher.py"/>
   <node pkg="tests" name="uav_input_publisher" type="uav_input_publisher.py" output="screen"/>
