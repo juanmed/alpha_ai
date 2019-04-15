@@ -29,9 +29,9 @@ class rateThrust_Publisher():
         rt_msg.header.stamp = rospy.Time.now()
         rt_msg.header.frame_id = 'uav/imu'
 
-        rt_msg.angular_rates.x = 0.0
-        rt_msg.angular_rates.y = 0.0
-        rt_msg.angular_rates.z = 0.0
+        rt_msg.angular_rates.x = 1.0
+        rt_msg.angular_rates.y = 1.0
+        rt_msg.angular_rates.z = 1.0
 
         rt_msg.thrust.x = 0.0
         rt_msg.thrust.y = 0.0
