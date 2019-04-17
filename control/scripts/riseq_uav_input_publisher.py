@@ -14,8 +14,8 @@ from mav_msgs.msg import RateThrust
 from nav_msgs.msg import Odometry
 
 # import libraries
-import trajectory.df_flat as df_flat
-import lqr_gains as lqrg
+from tests import scripts.trajectory.df_flat as df_flat
+import linear_control_gains as lqrg
 
 g = 9.81
 
