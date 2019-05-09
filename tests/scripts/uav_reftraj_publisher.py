@@ -56,7 +56,7 @@ class Trajectory_Generator():
         self.is_quaternion = True
         self.keyframe, self.waypoint = self.keyframe_cls.keyframe_generation(self.init_pose, self.is_quaternion,
                                                                              self.gate_location, self.gate_count)
-
+        '''
         # set time segment
         if self.mode == "Challenge easy":
             self.init_t = [0, 5]
@@ -74,6 +74,10 @@ class Trajectory_Generator():
             self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
             self.init_t = np.array(self.init_t) * 15
             self.new_t = self.init_t
+        '''
+        self.init_t = [0, 0.9, 1.7, 2.5, 3.5, 4.0, 4.5, 5.5, 6.0, 6.5, 7.5, 8.5, 9]
+        self.init_t = np.array(self.init_t) * 15
+        self.new_t = self.init_t
 
         # current state(pos, vel, acc, jerk, snap)
         self.current_pos = self.keyframe[0]  # x y z psi
@@ -107,19 +111,6 @@ class Trajectory_Generator():
         self.i = 0
 
     def compute_reference_traj(self, time):
-        ref_time = time - self.start_time
-        x = self.sol_x[self.n*(self.order+1)*self.i: self.n*(self.order+1)*(self.i+1)]
-        #ref_time = time - self.last_time
-        #x = self.sol_x[self.n * (self.order + 1) * 0: self.n * (self.order + 1) * (0 + 1)]
-        flatout_trajectory = compute_trajectory.compute_trajectory(x, self.order, ref_time)
-        ref_trajectory = df_flat.compute_ref(flatout_trajectory)
-
-        # Drone can not get sensor data of acc, jerk, snap
-        # instead, it uses reference acc, jerk, snap for current state.
-        # self.current_acc = np.append(flatout_trajectory[2], flatout_trajectory[7])
-        # self.current_jerk = np.append(flatout_trajectory[3], 0)
-        # self.current_snap = np.append(flatout_trajectory[4], 0)
-
         if (time - self.last_time) > (self.init_t[self.i+1] - self.init_t[self.i]):
         #if (time - self.last_time) > self.new_t[1] - self.new_t[0]:
             #print time
@@ -127,9 +118,41 @@ class Trajectory_Generator():
             self.last_time = time
             #self.trajectory_update()
 
+        # stay hover at the last waypoint position
         if self.i == self.waypoint - 1:
             print ("Total time: {}".format(time-self.start_time))
-            #exit()
+            pos = self.keyframe[-1]
+            x = pos[0]
+            y = pos[1]
+            z = pos[2]
+            psi = pos[3]
+
+            pos = np.array([x, y, z])
+            vel = np.array([0, 0, 0])
+            acc = np.array([0, 0, 0])
+            jerk = np.array([0, 0, 0])
+            snap = np.array([0, 0, 0])
+            yaw = psi
+            yaw_dot = 0
+            yaw_ddot = 0
+            flatout_trajectory = [pos, vel, acc, jerk, snap, yaw, yaw_dot, yaw_ddot]
+            ref_trajectory = df_flat.compute_ref(flatout_trajectory)
+
+            # exit()
+
+        else:
+            ref_time = time - self.start_time
+            x = self.sol_x[self.n * (self.order + 1) * self.i: self.n * (self.order + 1) * (self.i + 1)]
+            # ref_time = time - self.last_time
+            # x = self.sol_x[self.n * (self.order + 1) * 0: self.n * (self.order + 1) * (0 + 1)]
+            flatout_trajectory = compute_trajectory.compute_trajectory(x, self.order, ref_time)
+            ref_trajectory = df_flat.compute_ref(flatout_trajectory)
+
+            # Drone can not get sensor data of acc, jerk, snap
+            # instead, it uses reference acc, jerk, snap for current state.
+            # self.current_acc = np.append(flatout_trajectory[2], flatout_trajectory[7])
+            # self.current_jerk = np.append(flatout_trajectory[3], 0)
+            # self.current_snap = np.append(flatout_trajectory[4], 0)
 
         return ref_trajectory
 
@@ -352,10 +375,10 @@ def pub_traj():
     rospy.init_node('uav_ref_trajectory_input_publisher', anonymous=True)
 
     # wait time for simulator to get ready...
-    wait_time = int(rospy.get_param("riseq/trajectory_wait"))
-    while( rospy.Time.now().to_sec() < wait_time ):
-        if( ( int(rospy.Time.now().to_sec()) % 1) == 0 ):
-            rospy.loginfo("Starting Trajectory Generator in {:.2f} seconds".format(wait_time - rospy.Time.now().to_sec()))
+    #wait_time = int(rospy.get_param("riseq/trajectory_wait"))
+    #while( rospy.Time.now().to_sec() < wait_time ):
+    #    if( ( int(rospy.Time.now().to_sec()) % 1) == 0 ):
+    #        rospy.loginfo("Starting Trajectory Generator in {:.2f} seconds".format(wait_time - rospy.Time.now().to_sec()))
     
 
     # create a trajectory generator
@@ -376,7 +399,6 @@ def pub_traj():
     while not rospy.is_shutdown():
         
         try:
-
             # Compute trajectory at time = now
             time = rospy.get_time()
             ref_traj = traj_gen.compute_reference_traj(time)
@@ -471,7 +493,7 @@ def pub_traj():
             traj_publisher.publish(traj)
             rospy.loginfo(traj)
             rate.sleep()
-            
+
             #traj_gen.trajectory_update(time)
 
         except Exception:
